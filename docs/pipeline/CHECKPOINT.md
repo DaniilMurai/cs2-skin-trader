@@ -26,11 +26,11 @@ verified task, stop only for questions only the author can answer). Last commit:
 
 ## Left
 **Needs the author:**
-1. T-08 GitHub setup (steps 2–5 in `ops/README.md`). The code repo is already public at
-   https://github.com/DaniilMurai/cs2-skin-trader (public → unlimited Actions minutes, so the
-   hourly sales polling fits). Left: private `cs2-skin-data` with one commit, a token with
-   contents:write on it only, secrets `DATA_REPO_TOKEN` + `MARKETCSGO_API_KEY`. Until then the
-   hourly workflow fails each run.
+1. T-08 GitHub setup — status 2026-11-09 ~17:40 UTC: code repo public and the workflow registered;
+   `cs2-skin-data` private with an initial commit; the secrets `DATA_REPO_TOKEN` and
+   `MARKETCSGO_API_KEY` were added to **cs2-skin-data** — they must be in **cs2-skin-trader**
+   (the repo that runs the workflow). Once they are: `gh workflow run collect.yml`, then
+   `gh run watch`, then check `cs2-skin-data` got files under `asks/` and `bids/` (close T-08).
 2. T-09 install the launchd job (`ops/README.md`).
 
 **After the backfill finishes (in this order):**
