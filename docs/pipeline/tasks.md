@@ -34,7 +34,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: subagent
       Depends on: —
 
-- [ ] T-03 — market.csgo public client: asks + bids
+- [x] T-03 — market.csgo public client: asks + bids
       Files: src/cs2trader/sources/marketcsgo.py, tests/test_marketcsgo_public.py,
              tests/fixtures/mc_asks.json, tests/fixtures/mc_bids.json
       Do: `MarketCsgoPublic.asks()/bids()` → `Snapshot` per the source schemas (asks `price`

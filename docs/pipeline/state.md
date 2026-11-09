@@ -6,7 +6,7 @@ Updated: 2026-11-09
 Current stage: **7 — implementation**
 Gates: passed up to and including stage 6 (author's go to stage 7, 2026-11-09)
 
-Next action: T-03 (market.csgo public client) → T-04…T-10 (collector first). T-01 done 2026-11-09 (commit 8e55ae0); T-02 done 2026-11-09 (uncommitted).
+Next action: T-04 (snapshot storage) → T-05…T-10 (collector first). T-01 done 2026-11-09 (commit 8e55ae0); T-02 done 2026-11-09; T-03 done 2026-11-09.
 
 ## Stage history
 - 0 context load — 2026-11-09 (new project: README only, no git, Python 3.14.7, uv)

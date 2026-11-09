@@ -28,6 +28,30 @@ class FxRate:
 
 
 @dataclass(frozen=True)
+class AskRow:
+    market_hash_name: str
+    ask: float
+    # active listing count, not sales
+    listings: int
+
+
+@dataclass(frozen=True)
+class BidRow:
+    market_hash_name: str
+    bid: float
+    orders: int
+
+
+@dataclass(frozen=True)
+class Snapshot:
+    kind: Literal["asks", "bids"]
+    feed_time: datetime
+    fetched_at: datetime
+    host: Literal["gha", "mac"]
+    rows: list[AskRow] | list[BidRow]
+
+
+@dataclass(frozen=True)
 class Order:
     market_hash_name: str
     side: Literal["buy", "sell"]
