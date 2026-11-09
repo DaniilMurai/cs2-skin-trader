@@ -8,6 +8,7 @@ from cs2trader.strategies.benchmarks import (
     BuyAndHoldUniverse,
     Cash,
 )
+from cs2trader.strategies.event import EVENT_GRID, EVENT_SPEC, EventStrategy
 from cs2trader.strategies.mean_reversion import MR_GRID, MR_SPEC, MeanReversion
 from cs2trader.strategies.momentum import XS_GRID, XS_SPEC, XsMomentum
 from cs2trader.strategies.trend import TREND_GRID, TREND_SPEC, TrendFollow
@@ -56,6 +57,7 @@ REGISTRY: Mapping[str, StrategyEntry] = {
     "v1_dip_knives": StrategyEntry("v1_dip_knives", "video", DipKnives, V1_GRID, V1_SPEC),
     "v2_category_momentum": StrategyEntry("v2_category_momentum", "video", CategoryMomentum, V2_GRID, V2_SPEC),
     "xs_momentum": StrategyEntry("xs_momentum", "momentum", XsMomentum, XS_GRID, XS_SPEC),
+    "event": StrategyEntry("event", "event", EventStrategy, EVENT_GRID, EVENT_SPEC),
     "trend_ma": StrategyEntry("trend_ma", "trend", TrendFollow, TREND_GRID, TREND_SPEC),
     "mean_reversion": StrategyEntry("mean_reversion", "mean_reversion", MeanReversion, MR_GRID, MR_SPEC),
 }

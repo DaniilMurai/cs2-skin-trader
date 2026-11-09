@@ -319,7 +319,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: main loop
       Depends on: T-14
 
-- [ ] T-27b — Event strategy: Majors and case pool exits
+- [x] T-27b — Event strategy: Majors and case pool exits
       Files: src/cs2trader/strategies/event.py, src/cs2trader/strategies/registry.py,
              tests/test_event.py
       Do: two rules from S-09 (only these have enough events): (1) hold the current Major's
