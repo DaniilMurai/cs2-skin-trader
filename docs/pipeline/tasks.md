@@ -227,7 +227,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: main loop
       Depends on: T-15, T-16, T-18
 
-- [ ] T-20 — Run output and `cs2 backtest` / `cs2 strategies`
+- [x] T-20 — Run output and `cs2 backtest` / `cs2 strategies`
       Files: src/cs2trader/cli.py, src/cs2trader/backtest/engine.py, tests/test_cli_backtest.py
       Do: `data/runs/<run_id>/` with `spec.json` as real JSON (not `str(spec)`); `--params`
           validated against the registry grid keys; `cs2 strategies` lists name, family, grid
@@ -238,7 +238,7 @@ Until then they are skipped and the next task in order is taken.
 
 ## E. Strategies and benchmarks (Plan step 4, AC-10)
 
-- [ ] T-21 — Benchmarks: cash, bh_universe, bh_knives_gloves
+- [x] T-21 — Benchmarks: cash, bh_universe, bh_knives_gloves
       Files: src/cs2trader/strategies/benchmarks.py, src/cs2trader/strategies/registry.py,
              tests/test_benchmarks.py
       Do: buy-and-hold sizing (author, 2026-11-09): an item dearer than its equal share is
@@ -251,7 +251,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: subagent
       Depends on: T-20
 
-- [ ] T-22 — V1 "falling market": dip buying in knives/gloves
+- [ ] T-22 — V1 "falling market": dip buying in knives/gloves *(code and tests done 2026-11-09; the 2019–2025 run waits for T-14)*
       Files: src/cs2trader/strategies/video.py, src/cs2trader/strategies/registry.py,
              tests/test_v1.py
       Do: write the rule spec (entry on a 7-day drop, liquidity filter, sizing, exit,
@@ -263,7 +263,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: main loop
       Depends on: T-21
 
-- [ ] T-23 — V2 "rising market": category momentum
+- [ ] T-23 — V2 "rising market": category momentum *(code and tests done 2026-11-09; the 2019–2025 run waits for T-14)*
       Files: src/cs2trader/strategies/video.py, src/cs2trader/strategies/registry.py,
              tests/test_v2.py
       Do: rule spec (category growth window, top-k categories, how "buy more actively"
@@ -317,7 +317,7 @@ Until then they are skipped and the next task in order is taken.
 
 ## F. Evaluation and report (Plan step 5, AC-11, AC-12, AC-13)
 
-- [ ] T-28 — Metrics, total and per regime
+- [x] T-28 — Metrics, total and per regime
       Files: src/cs2trader/evaluate.py, tests/test_metrics.py
       Do: `metrics(result, regimes)`: net return and max drawdown in both units, daily Sharpe
           (cash units, annualised √365), trades, fees; per regime = the days with that label

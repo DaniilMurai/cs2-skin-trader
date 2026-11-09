@@ -8,7 +8,7 @@ Author's standing instruction (2026-11-09): work through tasks autonomously, com
 task or batch without asking; stop only for questions that need the author.
 Gates: passed up to and including stage 6 (author's go to stage 7, 2026-11-09)
 
-Next action: T-20 (run output), T-21 (benchmarks) and T-28 (metrics); T-14 backfill running in data/backfill/ (merge its steam_points/steam_fetch_log into data/ when done, then T-16 real check and T-13 data check). Author: GitHub setup for T-08, launchd install for T-09. Done 2026-11-09: T-01…T-07, T-11…T-13, T-15, T-18, T-19.
+Next action: T-24…T-26 (trend, momentum, mean reversion), T-29 (walk-forward), T-30 (verdict), T-31 (report); T-14 backfill running in data/backfill/ (~28 h at ~3.7 s/item: Steam response time, not our limit). Author: GitHub setup for T-08, launchd install for T-09. Done 2026-11-09: T-01…T-07, T-11…T-13, T-15, T-18…T-21, T-28; code-only (real-data check pending): T-10, T-16, T-22, T-23.
 
 ## Stage history
 - 0 context load — 2026-11-09 (new project: README only, no git, Python 3.14.7, uv)
@@ -98,6 +98,17 @@ Next action: T-20 (run output), T-21 (benchmarks) and T-28 (metrics); T-14 backf
   full backfill shows how many items fail.
 - 2026-11-09 — Steam backfill runs in its own data dir so its 19-hour DuckDB write lock doesn't block
   other commands.
+- 2026-11-09 — V1 rules (T-22): knives/gloves in the universe, 7-day drop ≥ `drop_7d`, deepest first,
+  slots = equity / `max_positions` but at least one unit if cash covers it (so $100 can hold a knife);
+  exits on take-profit, `max_hold` or stop-loss ("protection"), only on unlocked units; 7-day
+  cooldown after an exit (otherwise a stop-loss is re-bought at once). Grid 72 variants.
+- 2026-11-09 — V2 rules (T-23): every `rebalance_days`, top-`top_k` categories by `window`-day index
+  growth > 0; exposure = min(1, growth / `full_growth`) of each category's share; best
+  `items_per_cat` items by own return, equal dollars. Grid 16 variants.
+- 2026-11-09 — Benchmarks (T-21): buy-and-hold targets fixed on the first day, unfilled parts re-ordered
+  for 10 decision days (volume cap cancels the rest), never sells; price estimate × (1 + spread + 2%).
+- 2026-11-09 — Metrics (T-28): per-regime return chains the labelled days' daily returns; drawdown on
+  that chained path; Sharpe × √365 on daily simple returns (ddof 1).
 - 2026-11-09 — Task order: the market.csgo collector (T-02…T-10) before the Steam backfill
   and everything else — collector days can't be recovered later.
 - 2026-11-09 — Event/seasonal strategy family has no known dated event source → spike S-09

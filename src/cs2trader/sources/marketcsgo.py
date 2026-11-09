@@ -1,8 +1,8 @@
 import json
 import time
+from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
-from collections.abc import Callable, Sequence
 from typing import Any, Literal
 
 import httpx

@@ -1,32 +1,21 @@
-import math
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal
 
-from cs2trader.models import Order
 from cs2trader.strategies.base import Strategy
-
-
-class BuyAndHoldUniverse:
-    name = "bh_universe"
-
-    def __init__(self, params: Mapping[str, Any]) -> None:
-        self.params = params
-        self._done = False
-
-    def decide(self, market, book) -> list[Order]:
-        if self._done:
-            return []
-        self._done = True
-        today = market.history(1)
-        if today.is_empty():
-            return []
-        budget = book.balance / today.height
-        return [
-            Order(r["market_hash_name"], "buy", q)
-            for r in today.iter_rows(named=True)
-            if (q := math.floor(budget / r["price"])) > 0
-        ]
+from cs2trader.strategies.benchmarks import (
+    BuyAndHoldKnivesGloves,
+    BuyAndHoldUniverse,
+    Cash,
+)
+from cs2trader.strategies.video import (
+    V1_GRID,
+    V1_SPEC,
+    V2_GRID,
+    V2_SPEC,
+    CategoryMomentum,
+    DipKnives,
+)
 
 
 @dataclass(frozen=True)
@@ -38,9 +27,29 @@ class StrategyEntry:
     spec_md: str
 
 
+SPEC_BH = (
+    "On the first decision day with a non-empty target set, take the point-in-time universe{scope}. "
+    "Estimate each item's fill price as its latest price in the last 7 days x (1 + spread 3%) x "
+    "(1 + safety margin 2%). Split capital equally; an item dearer than its equal share is skipped and "
+    "the capital re-split across the rest, repeated until every kept item is affordable. Target "
+    "quantity = floor(share / estimated price). Orders fill on the next bar and the volume cap "
+    "cancels the rest, so for the following 10 decision days the still-missing target quantities are "
+    "re-ordered (limited by cash at the estimated price). Never sells; after the retry window the "
+    "leftover cash stays idle."
+)
+
 REGISTRY: Mapping[str, StrategyEntry] = {
-    "bh_universe": StrategyEntry(
-        "bh_universe", "benchmark", BuyAndHoldUniverse, {},
-        "Buy every universe item in equal dollar weights on the first bar; never sell.",
+    "cash": StrategyEntry(
+        "cash", "benchmark", Cash, {},
+        "Hold the starting balance in cash for the whole period; never trade. Equity is flat.",
     ),
+    "bh_universe": StrategyEntry(
+        "bh_universe", "benchmark", BuyAndHoldUniverse, {}, SPEC_BH.format(scope=""),
+    ),
+    "bh_knives_gloves": StrategyEntry(
+        "bh_knives_gloves", "benchmark", BuyAndHoldKnivesGloves, {},
+        SPEC_BH.format(scope=" restricted to items in the knife or glove categories"),
+    ),
+    "v1_dip_knives": StrategyEntry("v1_dip_knives", "video", DipKnives, V1_GRID, V1_SPEC),
+    "v2_category_momentum": StrategyEntry("v2_category_momentum", "video", CategoryMomentum, V2_GRID, V2_SPEC),
 }

@@ -8,6 +8,7 @@ import polars as pl
 
 from cs2trader.backfill import backfill, feed_universe, read_names, request_logger
 from cs2trader.backtest.engine import run
+from cs2trader.backtest.runs import save_run
 from cs2trader.check import format_results, raise_if_failed, run_checks
 from cs2trader.collect import (
     collect_status,
@@ -24,6 +25,7 @@ from cs2trader.market.regimes import label_regimes
 from cs2trader.models import RunSpec
 from cs2trader.sources import fx, steam
 from cs2trader.store import Store
+from cs2trader.strategies.registry import REGISTRY
 
 FX_START = date(2013, 1, 1)
 FX_REFETCH_DAYS = 7
@@ -58,16 +60,34 @@ def cmd_backfill_steam(args: argparse.Namespace) -> None:
     print(f"backfill: {rep.ok} ok, {rep.empty} empty, {rep.errors} errors, {rep.skipped} already stored")
 
 
+def parse_params(strategy: str, text: str) -> dict:
+    if strategy not in REGISTRY:
+        raise ConfigError(f"unknown strategy {strategy!r}; known: {', '.join(sorted(REGISTRY))}")
+    try:
+        params = json.loads(text)
+    except json.JSONDecodeError as e:
+        raise ConfigError(f"--params is not valid JSON: {e}") from e
+    if not isinstance(params, dict):
+        raise ConfigError("--params must be a JSON object")
+    grid = REGISTRY[strategy].grid
+    if unknown := sorted(set(params) - set(grid)):
+        raise ConfigError(f"--params: unknown key(s) {unknown} for {strategy}; "
+                          f"allowed: {sorted(grid) or 'none (grid is empty)'}")
+    return params
+
+
+def cmd_strategies(args: argparse.Namespace) -> None:
+    for name, e in REGISTRY.items():
+        grid = ", ".join(f"{k}: {list(v)}" for k, v in e.grid.items()) or "-"
+        print(f"{name}  {e.family}  {grid}")
+
+
 def cmd_backtest(args: argparse.Namespace) -> None:
     settings = load_settings()
-    spec = RunSpec(args.strategy, json.loads(args.params), args.capital,
+    spec = RunSpec(args.strategy, parse_params(args.strategy, args.params), args.capital,
                    date.fromisoformat(args.date_from), date.fromisoformat(args.date_to))
-    result = run(spec, Store(settings.data_dir))
-    out = settings.data_dir / "runs" / result.run_id
-    out.mkdir(parents=True, exist_ok=True)
-    result.trades.write_parquet(out / "trades.parquet")
-    result.equity.write_parquet(out / "equity.parquet")
-    (out / "spec.json").write_text(json.dumps({"spec": str(spec), "data_version": result.data_version}))
+    result = run(spec, Store(settings.data_dir), settings)
+    out = save_run(result, settings.data_dir / "runs")
     eq = result.equity
     print(f"run {result.run_id}  data {result.data_version}  bars {eq.height}")
     print(result.trades.select("t", "market_hash_name", "side", "qty_requested", "qty_filled",
@@ -190,6 +210,8 @@ def main() -> None:
     bt.add_argument("--to", dest="date_to", required=True)
     bt.add_argument("--params", default="{}")
     bt.set_defaults(func=cmd_backtest)
+
+    sub.add_parser("strategies").set_defaults(func=cmd_strategies)
 
     args = p.parse_args()
     try:

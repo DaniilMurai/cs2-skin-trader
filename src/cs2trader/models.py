@@ -175,3 +175,14 @@ class RunResult:
     trades: pl.DataFrame
     equity: pl.DataFrame
     cashout_available: date | datetime | None
+
+
+@dataclass(frozen=True)
+class Metrics:
+    net_return_cash: float
+    net_return_steam: float
+    max_drawdown_cash: float
+    max_drawdown_steam: float
+    sharpe_cash: float
+    n_trades: int
+    fees_paid: float

@@ -138,6 +138,9 @@ def _equity(t: date, book: Book, last: dict[str, Mapping[str, Any]], cost: CostM
                        gross * (1 - cost.withdraw_fee_steam), book.fees_paid)
 
 
+FILL_SCHEMA = {"t": pl.Date, "market_hash_name": pl.String, "side": pl.String, "qty_requested": pl.Int64,
+               "qty_filled": pl.Int64, "price": pl.Float64, "fee": pl.Float64, "reason": pl.String}
+
 # Bars loaded before `spec.start` so lookbacks, the universe and regimes work from day one.
 WARMUP_DAYS = 400
 
@@ -179,7 +182,7 @@ def run(spec: RunSpec, store: Store, settings: Settings | None = None) -> RunRes
     run_id = hashlib.sha256((spec_json + view_json + data_version).encode()).hexdigest()[:16]
     return RunResult(
         run_id, spec, data_version,
-        pl.DataFrame([asdict(f) for f in trades]) if trades else pl.DataFrame(),
+        pl.DataFrame([asdict(f) for f in trades], schema=FILL_SCHEMA),
         pl.DataFrame([asdict(e) for e in equity]),
         last_sale + timedelta(days=cost_at(spec.costs, last_sale).cashout_hold_days) if last_sale else None,
     )

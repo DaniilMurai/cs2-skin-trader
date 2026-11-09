@@ -1,6 +1,6 @@
 from datetime import date, datetime, timedelta
-from xml.etree import ElementTree
 from typing import Literal
+from xml.etree import ElementTree
 
 import httpx
 
