@@ -47,7 +47,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: subagent
       Depends on: T-02
 
-- [ ] T-04 — Snapshot storage + `asks`/`bids` views
+- [x] T-04 — Snapshot storage + `asks`/`bids` views
       Files: src/cs2trader/store.py, tests/test_store_snapshots.py
       Do: `Store.write_snapshot` → `data/collector/<kind>/day=YYYY-MM-DD/<feed_time>-<host>.parquet`
           (zstd); DuckDB views `asks`, `bids` over the Parquet tree, dedup on
@@ -57,7 +57,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: subagent
       Depends on: T-03
 
-- [ ] T-05 — CBR RUB rates + full-history `cs2 fx update`
+- [x] T-05 — CBR RUB rates + full-history `cs2 fx update`
       Files: src/cs2trader/sources/fx.py, src/cs2trader/cli.py, tests/test_fx.py,
              tests/fixtures/cbr.xml
       Do: `fetch_rates("RUB", ...)` from CBR XML (windows-1251, comma decimal, Value/Nominal,
@@ -144,6 +144,8 @@ Until then they are skipped and the next task in order is taken.
              tests/test_items.py, tests/fixtures/items_db_sample.json
       Do: fetch ByMykel `all.json` (at most daily, cached), `classify` by the DB then by name
           rules (spike S-04), store `items` with `first_seen`; the raw 78 MB file isn't kept
+          `daily_bars` gains a `category` column from `items` (the engine looks up
+          `FillModel.ratio` by it, T-18; without it every item gets `ratio_fallback`)
       DoD: `uv run pytest tests/test_items.py` green on the fixed 20-name list from AC-4;
            `uv run cs2 items update` on the current asks universe leaves ≤ 1% `unknown`
       Executor: subagent
@@ -169,7 +171,7 @@ Until then they are skipped and the next task in order is taken.
 
 ## C. Market model (Plan step 2, AC-5, AC-6)
 
-- [ ] T-15 — Point-in-time universe
+- [x] T-15 — Point-in-time universe
       Files: src/cs2trader/market/universe.py, tests/test_universe.py
       Do: `universe(bars, on, s)`: ≥ `min_history_days` of history, trailing 30-day median
           volume ≥ `min_median_volume`, last price ≥ `min_price_usd`, data ≤ `on` only
@@ -203,7 +205,7 @@ Until then they are skipped and the next task in order is taken.
 
 ## D. Backtest engine (Plan step 3, AC-7, AC-8, AC-9)
 
-- [ ] T-18 — Fills, costs and settlement to the cent
+- [x] T-18 — Fills, costs and settlement to the cent
       Files: src/cs2trader/backtest/engine.py, tests/test_engine_fills.py
       Do: bring `apply_fills` and the run loop to the contract: cost schedule picked by bar
           date, Steam→market.csgo ratio from `FillModel`, volume cap with the rest cancelled,

@@ -12,10 +12,18 @@ from cs2trader.sources import fx, steam
 from cs2trader.store import Store
 
 
+FX_START = date(2013, 1, 1)
+FX_REFETCH_DAYS = 7
+
+
 def cmd_fx_update(args: argparse.Namespace) -> None:
     today = datetime.now(UTC).date()
-    n = Store(load_settings().data_dir).upsert_fx(fx.fetch_rates("UAH", today - timedelta(days=30), today))
-    print(f"fx: {n} UAH rates stored")
+    store = Store(load_settings().data_dir)
+    for base in ("UAH", "RUB"):
+        first, last = store.db.execute("SELECT min(day), max(day) FROM fx_rates WHERE base = ?", [base]).fetchone()
+        start = FX_START if first is None or first > FX_START else max(FX_START, last - timedelta(days=FX_REFETCH_DAYS))
+        n = store.upsert_fx(fx.fetch_rates(base, start, today))
+        print(f"fx: {base} {start}..{today}: {n} rates stored")
 
 
 def cmd_backfill_steam(args: argparse.Namespace) -> None:

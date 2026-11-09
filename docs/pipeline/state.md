@@ -6,7 +6,7 @@ Updated: 2026-11-09
 Current stage: **7 — implementation**
 Gates: passed up to and including stage 6 (author's go to stage 7, 2026-11-09)
 
-Next action: T-04 (snapshot storage) → T-05…T-10 (collector first). T-01 done 2026-11-09 (commit 8e55ae0); T-02 done 2026-11-09; T-03 done 2026-11-09.
+Next action: T-06 (keyed sales) → T-07…T-10 (collector first). Done 2026-11-09: T-01…T-05, T-15, T-18.
 
 ## Stage history
 - 0 context load — 2026-11-09 (new project: README only, no git, Python 3.14.7, uv)
@@ -62,6 +62,13 @@ Next action: T-04 (snapshot storage) → T-05…T-10 (collector first). T-01 don
   stage 6 (skip and re-split, or leave in cash).
 - 2026-11-09 — bh_universe sizing (author): skip items dearer than their equal share and
   re-split the capital across affordable ones (keeps the benchmark fully invested).
+- 2026-11-09 — Engine (T-18): cost model picked per bar by `valid_from`; ratio looked up by a
+  `category` bar column (fallback when absent); volume cap and affordability use a 1e-9 epsilon
+  against float error; limit orders fill only at or better than the limit.
+- 2026-11-09 — FX (T-05): CBR rates forward-filled over non-publication days (`filled=True`);
+  a missing earlier record is a SchemaError, never an invented rate.
+- 2026-11-09 — Snapshots (T-04): when GHA and the Mac record the same feed_time, the `gha`
+  row wins in the views.
 - 2026-11-09 — Task order: the market.csgo collector (T-02…T-10) before the Steam backfill
   and everything else — collector days can't be recovered later.
 - 2026-11-09 — Event/seasonal strategy family has no known dated event source → spike S-09
