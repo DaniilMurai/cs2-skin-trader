@@ -93,7 +93,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: subagent
       Depends on: T-06
 
-- [ ] T-08 — GitHub Actions hourly collector + `cs2 collect pull` *(workflow and pull done; needs the author's GitHub setup, ops/README.md)*
+- [x] T-08 — GitHub Actions hourly collector + `cs2 collect pull` *(first run 2026-11-09 20:10 UTC green: 27,230 asks, 26,132 bids, 459,621 sales rows pushed to cs2-skin-data; the second scheduled run is still to be seen)*
       Files: .github/workflows/collect.yml, src/cs2trader/collect.py, src/cs2trader/cli.py
       Do: hourly cron workflow: `uv sync`, `cs2 collect run --host gha`, push new Parquet
           files to the private repo `cs2-skin-data` with `DATA_REPO_TOKEN`; `cs2 collect pull`
@@ -104,7 +104,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: main loop
       Depends on: T-01, T-07
 
-- [ ] T-09 — Mac launchd gap filler *(plist ready; the author installs it, ops/README.md)*
+- [ ] T-09 — Mac launchd gap filler *(installed 2026-11-09 ~20:15 UTC; check ≥ 2 `-mac.parquet` files after 2 h)*
       Files: ops/com.cs2trader.collect.plist, ops/README.md
       Do: a launchd agent running `cs2 collect run --kinds asks,bids --host mac` hourly
           (StartCalendarInterval, so a missed run fires on wake); logs to `data/logs/`.

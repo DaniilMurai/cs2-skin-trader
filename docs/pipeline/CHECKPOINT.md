@@ -25,13 +25,12 @@ verified task, stop only for questions only the author can answer). Last commit:
 | Evaluation | T-28 metrics, T-29 walk-forward/holdout/stress, T-30 verdict + deflated Sharpe, T-31 HTML report |
 
 ## Left
-**Needs the author:**
-1. T-08 GitHub setup — status 2026-11-09 ~17:40 UTC: code repo public and the workflow registered;
-   `cs2-skin-data` private with an initial commit; the secrets `DATA_REPO_TOKEN` and
-   `MARKETCSGO_API_KEY` were added to **cs2-skin-data** — they must be in **cs2-skin-trader**
-   (the repo that runs the workflow). Once they are: `gh workflow run collect.yml`, then
-   `gh run watch`, then check `cs2-skin-data` got files under `asks/` and `bids/` (close T-08).
-2. T-09 install the launchd job (`ops/README.md`).
+**Collector status (no longer needs the author):**
+1. T-08 done: the first GitHub run (2026-11-09 20:10 UTC) was green and pushed asks, bids and
+   459,621 sales rows to `cs2-skin-data`. Check that the hourly scheduled runs keep succeeding
+   (`gh run list`), then 48 h later `cs2 collect pull` + `cs2 collect status` (T-10, AC-3).
+2. T-09 installed 2026-11-09 ~20:15 UTC: check `ls data/collector/asks/day=*/ | grep mac` shows
+   new files at :47 each hour; close T-09.
 
 **After the backfill finishes (in this order):**
 1. `merge_from(Store(Path("data")), Path("data/backfill/data"))` (in `cs2trader.backfill`), then
