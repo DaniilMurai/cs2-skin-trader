@@ -1,0 +1,10 @@
+.env
+.venv/
+__pycache__/
+data/
+docs/pipeline/spikes/**/out/
+reports/
+.idea/
+.pytest_cache/
+.ruff_cache/
+.DS_Store

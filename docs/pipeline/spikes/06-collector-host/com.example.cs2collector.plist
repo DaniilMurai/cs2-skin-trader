@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- NOT INSTALLED. Would go to ~/Library/LaunchAgents/ -->
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.example.cs2collector</string>
+  <key>ProgramArguments</key><array>
+    <string>/usr/bin/python3</string>
+    <string>/Users/daniilmurai/PycharmProjects/cs2-skin-trader/docs/pipeline/spikes/06-collector-host/collect.py</string>
+  </array>
+  <key>StartCalendarInterval</key><dict><key>Minute</key><integer>5</integer></dict>
+  <key>StandardErrorPath</key><string>/tmp/cs2collector.err</string>
+</dict></plist>
