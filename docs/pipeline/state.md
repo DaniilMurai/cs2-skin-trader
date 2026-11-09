@@ -4,9 +4,11 @@ Project: cs2-skin-trader (research)
 Updated: 2026-11-09
 
 Current stage: **7 — implementation**
+Author's standing instruction (2026-11-09): work through tasks autonomously, commit each verified
+task or batch without asking; stop only for questions that need the author.
 Gates: passed up to and including stage 6 (author's go to stage 7, 2026-11-09)
 
-Next action: T-06 (keyed sales) → T-07…T-10 (collector first). Done 2026-11-09: T-01…T-05, T-15, T-18.
+Next action: T-07 (collect run) and T-12 (items). Done 2026-11-09: T-01…T-06, T-11, T-15, T-18.
 
 ## Stage history
 - 0 context load — 2026-11-09 (new project: README only, no git, Python 3.14.7, uv)
@@ -69,6 +71,13 @@ Next action: T-06 (keyed sales) → T-07…T-10 (collector first). Done 2026-11-
   a missing earlier record is a SchemaError, never an invented rate.
 - 2026-11-09 — Snapshots (T-04): when GHA and the Mac record the same feed_time, the `gha`
   row wins in the views.
+- 2026-11-09 — Steam (T-11): a never-sold item returns 200 `success:true, prices:[]`, the same as an
+  expired cookie; one canary request (`Clutch Case`) tells them apart → status `empty` or
+  SteamAuthError. An unknown name returns HTTP 500 with `prices:false` → `empty`. A 429 on the first
+  request = no auth; after a success = throttling (backoff). Requests logged to
+  `data/logs/steam_requests.tsv` for the rate check (T-13).
+- 2026-11-09 — Sales polling (T-06): never-fetched names from the latest asks snapshot are due;
+  an item with zero sales leaves no rows and is re-polled every run → T-07 caps the batch.
 - 2026-11-09 — Task order: the market.csgo collector (T-02…T-10) before the Steam backfill
   and everything else — collector days can't be recovered later.
 - 2026-11-09 — Event/seasonal strategy family has no known dated event source → spike S-09

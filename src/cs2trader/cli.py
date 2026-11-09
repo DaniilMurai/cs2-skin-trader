@@ -4,13 +4,13 @@ import sys
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
+from cs2trader.backfill import backfill, feed_universe, read_names, request_logger
 from cs2trader.backtest.engine import run
 from cs2trader.config import load_settings, require_secret
-from cs2trader.errors import Cs2Error, SourceUnavailable
+from cs2trader.errors import Cs2Error, SteamAuthError
 from cs2trader.models import RunSpec
 from cs2trader.sources import fx, steam
 from cs2trader.store import Store
-
 
 FX_START = date(2013, 1, 1)
 FX_REFETCH_DAYS = 7
@@ -30,23 +30,19 @@ def cmd_backfill_steam(args: argparse.Namespace) -> None:
     settings = load_settings()
     store = Store(settings.data_dir)
     rate = store.fx(datetime.now(UTC).date(), "UAH")
-    client = steam.SteamClient(require_secret("STEAM_LOGIN_SECURE"), interval_s=settings.steam.interval_s,
-                               max_retries=settings.steam.max_retries)
-    names = [n for n in Path(args.names).read_text().splitlines() if n.strip()]
-    done = store.fetched_names()
-    for name in names:
-        if name in done and not args.refresh:
-            print(f"skip  {name}")
-            continue
-        try:
-            points = client.price_history(name)
-        except SourceUnavailable as e:
-            store.mark_fetched(name, "error", 0)
-            print(f"error {name}: {e}")
-            continue
-        store.upsert_steam(points, rate)
-        store.mark_fetched(name, "ok", len(points))
-        print(f"ok    {name}: {len(points)} points, {points[0].ts:%Y-%m-%d} → {points[-1].ts:%Y-%m-%d}")
+    universe = args.names or settings.backfill.universe
+    names = feed_universe(store) if universe == "feed" else read_names(Path(universe))
+    client = steam.SteamClient(
+        require_secret("STEAM_LOGIN_SECURE"), interval_s=settings.steam.interval_s,
+        max_retries=settings.steam.max_retries, backoff_s=settings.steam.backoff_s,
+        on_request=request_logger(settings.data_dir / "logs" / "steam_requests.tsv"))
+    try:
+        rep = backfill(store, client, names, rate, refresh=args.refresh, limit=args.limit,
+                       stop_after_errors=settings.steam.stop_after_errors)
+    except SteamAuthError:
+        print("refresh STEAM_LOGIN_SECURE in .env and re-run; stored items are kept", file=sys.stderr)
+        raise
+    print(f"backfill: {rep.ok} ok, {rep.empty} empty, {rep.errors} errors, {rep.skipped} already stored")
 
 
 def cmd_backtest(args: argparse.Namespace) -> None:
@@ -80,7 +76,8 @@ def main() -> None:
 
     bf = sub.add_parser("backfill").add_subparsers(required=True)
     st = bf.add_parser("steam")
-    st.add_argument("--names", required=True)
+    st.add_argument("--names", help="file with one market_hash_name per line; default: backfill.universe")
+    st.add_argument("--limit", type=int)
     st.add_argument("--refresh", action="store_true")
     st.set_defaults(func=cmd_backfill_steam)
 

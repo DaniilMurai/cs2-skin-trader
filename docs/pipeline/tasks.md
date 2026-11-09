@@ -69,7 +69,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: subagent
       Depends on: T-02
 
-- [ ] T-06 — market.csgo keyed sales: client, storage, polling tiers
+- [x] T-06 — market.csgo keyed sales: client, storage, polling tiers
       Files: src/cs2trader/sources/marketcsgo.py, src/cs2trader/store.py,
              src/cs2trader/collect.py, tests/test_sales.py
       Do: `MarketCsgoKeyed.sales(names)` in batches of `mc.sales_batch`, ≥ `mc.interval_s`
@@ -77,8 +77,8 @@ Until then they are skipped and the next task in order is taken.
           name, ts, price_raw); `sales_due(store, now)` by `mc.sales_refill_share` and
           `mc.sales_tiers_h` (S-07)
       DoD: `uv run pytest tests/test_sales.py` green: 45 names → 3 requests; 401 → MarketCsgoKeyError;
-           an item whose last 100 sales span 10 h is due after 5 h, one spanning 30 days
-           gets the 24 h tier; a live call for 3 names stores rows in RUB
+           an item whose last 100 sales span 10 h (half = 5 h) gets the 1 h tier
+           with tiers [1, 6, 24] and 5 h with [1, 5, 24]; one spanning 30 days gets 24 h; a live call for 3 names stores rows in RUB
       Executor: subagent
       Depends on: T-04, T-05
 
@@ -126,7 +126,7 @@ Until then they are skipped and the next task in order is taken.
 
 ## B. Steam backfill and item data (Plan steps 1–2, AC-1, AC-2, AC-4)
 
-- [ ] T-11 — Backfill hardening: universe, limits, error policy
+- [x] T-11 — Backfill hardening: universe, limits, error policy
       Files: src/cs2trader/cli.py, src/cs2trader/sources/steam.py, tests/test_backfill.py
       Do: `--limit`, `--names`, default universe = names in the latest asks snapshot;
           backoff `steam.backoff_s × 2^n`; `stop_after_errors` in a row → exit 4;

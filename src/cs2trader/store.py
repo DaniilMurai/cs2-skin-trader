@@ -1,5 +1,5 @@
 import hashlib
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Literal
@@ -8,7 +8,7 @@ import duckdb
 import polars as pl
 
 from cs2trader.errors import FxMissing
-from cs2trader.models import FxRate, Snapshot, SteamPoint
+from cs2trader.models import FxRate, Sale, Snapshot, SteamPoint
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS steam_points (
@@ -28,6 +28,7 @@ _VIEW_COLUMNS = {
     "asks": "ask DOUBLE, listings BIGINT",
     "bids": "bid DOUBLE, orders BIGINT",
 }
+_SALES_COLUMNS = "ts TIMESTAMPTZ, price_raw DOUBLE, currency VARCHAR"
 
 
 class Store:
@@ -39,6 +40,22 @@ class Store:
         self.db.execute(SCHEMA)
         for kind in _VIEW_COLUMNS:
             self._create_view(kind)
+        self._create_sales_view()
+
+    def _create_sales_view(self) -> None:
+        tree = self.data_dir / "collector" / "sales"
+        if any(tree.glob("day=*/*.parquet")):
+            # Identical (name, ts, price_raw) = the same sale seen by overlapping polls (S-07)
+            src = f"""SELECT * EXCLUDE (day, rn) FROM (
+                SELECT *, row_number() OVER (
+                    PARTITION BY market_hash_name, ts, price_raw ORDER BY fetched_at, host) AS rn
+                FROM read_parquet('{tree}/day=*/*.parquet', hive_partitioning = true)
+            ) WHERE rn = 1"""
+        else:
+            cols = ", ".join(f"CAST(NULL AS {c.split()[1]}) AS {c.split()[0]}" for c in _SALES_COLUMNS.split(", "))
+            src = (f"SELECT CAST(NULL AS TIMESTAMPTZ) AS fetched_at, CAST(NULL AS VARCHAR) AS host, "
+                   f"CAST(NULL AS VARCHAR) AS market_hash_name, {cols} WHERE false")
+        self.db.execute(f"CREATE OR REPLACE VIEW sales AS {src}")
 
     def _create_view(self, kind: str) -> None:
         tree = self.data_dir / "collector" / kind
@@ -79,6 +96,29 @@ class Store:
         df.write_parquet(tmp, compression="zstd")
         tmp.replace(path)
         self._create_view(snap.kind)
+        return path
+
+    def write_sales(self, sales: Mapping[str, Sequence[Sale]], host: str) -> Path:
+        fetched_at = datetime.now(UTC)
+        rows = [s for group in sales.values() for s in group]
+        path = (self.data_dir / "collector" / "sales" / f"day={fetched_at:%Y-%m-%d}"
+                / f"{fetched_at:%Y%m%dT%H%M%S%fZ}-{host}.parquet")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        n = len(rows)
+        df = pl.DataFrame({
+            "fetched_at": [fetched_at] * n,
+            "host": [host] * n,
+            "market_hash_name": [r.market_hash_name for r in rows],
+            "ts": [r.ts.astimezone(UTC) for r in rows],
+            "price_raw": [r.price_raw for r in rows],
+            "currency": [r.currency for r in rows],
+        }, schema={"fetched_at": pl.Datetime("us", "UTC"), "host": pl.String,
+                   "market_hash_name": pl.String, "ts": pl.Datetime("us", "UTC"),
+                   "price_raw": pl.Float64, "currency": pl.String})
+        tmp = path.with_suffix(".tmp")
+        df.write_parquet(tmp, compression="zstd")
+        tmp.replace(path)
+        self._create_sales_view()
         return path
 
     def upsert_fx(self, rates: Sequence[FxRate]) -> int:

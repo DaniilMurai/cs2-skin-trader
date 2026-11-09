@@ -52,6 +52,14 @@ class Snapshot:
 
 
 @dataclass(frozen=True)
+class Sale:
+    market_hash_name: str
+    ts: datetime
+    price_raw: float
+    currency: Currency
+
+
+@dataclass(frozen=True)
 class Order:
     market_hash_name: str
     side: Literal["buy", "sell"]
