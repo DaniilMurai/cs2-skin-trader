@@ -1,6 +1,5 @@
 import math
 from collections.abc import Mapping
-from datetime import timedelta
 from typing import Any
 
 import polars as pl

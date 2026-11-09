@@ -8,7 +8,7 @@ Author's standing instruction (2026-11-09): work through tasks autonomously, com
 task or batch without asking; stop only for questions that need the author.
 Gates: passed up to and including stage 6 (author's go to stage 7, 2026-11-09)
 
-Next action: register T-24 trend when its subagent returns; T-31 report; T-27 event spike. T-14 backfill running in data/backfill/. Author: GitHub setup for T-08, launchd install for T-09. Done 2026-11-09: T-01…T-07, T-11…T-13, T-15, T-18…T-21, T-25, T-26, T-28…T-30; code-only (real-data check pending): T-10, T-16, T-22, T-23.
+Next action: T-31 report; T-27 event spike. T-14 backfill running in data/backfill/. Author: GitHub setup for T-08, launchd install for T-09. Done 2026-11-09: T-01…T-07, T-11…T-13, T-15, T-18…T-21, T-24…T-26, T-28…T-30; code-only (real-data check pending): T-10, T-16, T-22, T-23.
 
 ## Stage history
 - 0 context load — 2026-11-09 (new project: README only, no git, Python 3.14.7, uv)

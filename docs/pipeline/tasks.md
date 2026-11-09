@@ -274,7 +274,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: main loop
       Depends on: T-21
 
-- [ ] T-24 — Trend following / go-to-cash
+- [x] T-24 — Trend following / go-to-cash
       Files: src/cs2trader/strategies/trend.py, src/cs2trader/strategies/registry.py,
              tests/test_trend.py
       Do: hold the liquid universe while the market index is above its N-day moving average,
