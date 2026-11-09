@@ -115,6 +115,11 @@ Next action: T-31 report; T-27 event spike. T-14 backfill running in data/backfi
 - 2026-11-09 — Verdict (T-30): deflated Sharpe = annualised walk-forward test Sharpe − SR0 (Bailey &
   López de Prado 2014) from the variance of all tuning-run Sharpes and n_variants; holds if > 0.
   The stressed holdout run is compared with the benchmarks' normal runs (stricter reading).
+- 2026-11-09 — Events (S-09, T-27): the event family is narrowed to Majors (25) and case pool exits
+  (~32 moves to the rare pool, 32 discontinuations incl. 2025-12-18), plus two update markers;
+  operations and seasonal sales are too few. ByMykel case `first_sale_date` is not a release date
+  (only 7/45 within 3 days) → the T-13 first-date check skips cases. Case dates come from a
+  hand-kept third-party table (dates only, not its text); Majors from Wikipedia (CC BY-SA).
 - 2026-11-09 — Task order: the market.csgo collector (T-02…T-10) before the Steam backfill
   and everything else — collector days can't be recovered later.
 - 2026-11-09 — Event/seasonal strategy family has no known dated event source → spike S-09

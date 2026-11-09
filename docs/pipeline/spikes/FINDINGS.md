@@ -178,3 +178,80 @@ endpoints only (`get-list-items-info`, `bid-ask`); the key is read from `.env` a
   Re-fetching later at another rate rescales the whole item; returns are unaffected.
 - market.csgo sales (RUB) are converted at the CBR rate of the sale day (forward-filled over
   weekends/holidays); they are real-time prices, not re-converted history.
+
+## S-09 — event calendar: is there a free, dated, machine-readable source of CS market events 2013–today? (T-27, 2026-11-09)
+**Scripts:** `spikes/09-event-calendar/` — `crates.py` (ByMykel coverage), `news.py` and `droppool_news.py` (Steam news),
+`majors.py` and `wiki.py` (Liquipedia, Wikipedia), `compare_cases.py` (ByMykel vs a third-party drop-pool table).
+**Answer:** partly. Majors, operations, big game updates and the post-2023 care package pool have a free dated source;
+sticker capsule / souvenir dates and the pre-2023 case drop-pool history do not (only a hand-kept third-party table).
+
+**Facts:**
+- **ByMykel `items_all.json` (local copy, MIT)** — 481 crates, only 261 have `first_sale_date`.
+  By type (with date / total): Case 42/42, Sticker Capsule 76/100, Autograph Capsule 111/139, Souvenir 0/150,
+  Souvenir Highlight 0/14, Music Kit Box 13/13, Patch Capsule 7/7. Collections: 109/110 have `release_date`.
+  Date formats are mixed (`2013/12/17`, `2015/8/10`, `2026-07-03`). Capsule dates are sparse after 2017
+  (2018: 10 dated crates, 2022: 5, 2023: 3). The newest capsule "Cologne 2026 Sticker Capsule" has no date.
+  There is no drop-pool field (`loot_list` is None, no active/rare flag).
+  **The case dates are not release dates:** against a hand-kept table of 45 cases (below), only 7 of 45 are within 3 days;
+  median −8 days, range −159 to +329. Examples: Kilowatt 2024-01-16 (real 2024-02-06/07), Dreams & Nightmares 2021-11-17
+  (real 2022-01-20), Gallery 2024-07-01 (real 2024-10-02), Shattered Web 2019-06-12 (real 2019-11-18), eSports 2013 Case
+  2014-07-09 (real 2013-08-14). It looks like the date the item entered the item schema / first appeared, not the store date.
+- **Steam news, keyless:** `GET https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=730&count=1000&maxlength=0&feeds=steam_community_announcements[&enddate=<unix>]`
+  → HTTP 200, no key, no login. Paging with `enddate` returns the whole feed: 457 official posts from 2012-08-14 to 2026-11-05
+  (without the `feeds` filter: 1,777 items incl. press such as PCGamesN, SteamDB, from 2012-03-16). Each item has a unix `date`,
+  `title`, full `contents` (BBCode) and `tags` (`patchnotes`). Official posts per year: 2012:10, 2013:4, 2014:43, 2015:6, 2016:2,
+  2017:6, 2018:3, 2019:11, 2020:15, 2021:32, 2022:9, 2023:83, 2024:85, 2025:78, 2026:70.
+  So **2015–2022 is thin** (CS:GO updates lived on blog.counter-strike.net; only part of them is mirrored), 2023+ is complete.
+  Also `https://store.steampowered.com/feeds/news/app/730/` → 200, 21 KB RSS (recent items only, not tested for depth).
+  Checked in text: 2025-07-16 "Trade Protected Items" (post "Season Two: Episode One"/update); 2025-10-22 update with
+  "Extended functionality of the Trade Up Contract to allow exchanging 5 items of Covert quality"; 2026-05-22 Trade Up change for
+  Souvenir items; 2025-03-31, 2026-01-21 "[ WEEKLY CARE PACKAGE ] Added … Removed four weapon collections" (drop list changes, with names);
+  2025-09-16 Genesis Collection, 2026-03-11 Dead Hand Collection; 2025-07-02 and 2025-12-18 "Champions Autographs Capsule is now available
+  for purchase" (= Major end); 2025-11-12 and 2026-05-22 "<Major> Hub is now available … purchase tournament items" (= Major start);
+  2026-07-03 "The Jackass Sticker Capsule"; 2026-07-08 Armory removals; operations: 2013-05-02 Payback, 2021-05-04 "Operation Broken Fang
+  comes to an end", 2021-09-22 Riptide (38 title hits for "Operation" 2013–2021). Dates are exact to the day, but finding events means
+  keyword/regex over the free text; no structured event type. In-game weekly case drop (2023-06-09 "CASE DROPS" change; 2023-09-27
+  "Replaced weekly drops with a weekly Care Package") is mentioned but pre-2023 drop-pool rotations are **not** in the feed.
+- **Liquipedia** — `Majors` page: the list is a `{{TournamentsList|…publishertier::Major Championship}}` template backed by LiquipediaDB,
+  so the wikitext (`api.php?action=parse&page=Majors`, HTTP 200, 11 KB) contains no rows. Single tournament pages work via the MediaWiki API
+  `action=query&prop=revisions` and the infobox has `sdate`/`edate`: BLAST/Major/2025/Austin 2025-06-03..2025-06-22, PGL/2024/Copenhagen
+  2024-03-17..2024-03-31, DreamHack/2013/Winter 2013-11-28..2013-11-30 (all `publishertier=Major`). Without a gzip header: HTTP 406
+  "Gzip encoding is required for API requests". Terms (liquipedia.net/api-terms-of-use): MediaWiki API allowed, ≤1 request / 2 s,
+  `action=parse` ≤1 request / 30 s, custom User-Agent with contact, gzip, cache results; **scraping generated HTML pages is not permitted**;
+  content CC-BY-SA 3.0 → attribution required; LiquipediaDB (structured API) needs an approved request/key. No key for the MediaWiki API.
+- **Wikipedia "Counter-Strike Major Championships"** (CC BY-SA, MediaWiki API `action=parse&prop=wikitext`, HTTP 200, 72 KB):
+  a plain wikitable with 25 Majors, Jönköping 2013 (2013-11-28..30) … Cologne 2026, and Singapore 2026 (2026-11-25..2026-12-13, upcoming),
+  with `{{dts|November 28}}–30, 2013` start/end dates (formats vary: "October 28–November 1, 2015"; footnotes in cells). Parsed by hand-written
+  regex it takes ~20 lines; one fetch, no rate limit issue. Cross-checked against Liquipedia infobox for 2013-11-28..30 only (match); 2024/2025 not compared.
+- **Steam seasonal sales** — not in any Steam API. Fixed public pattern (Summer late June–early July, Winter ~Dec 19–Jan 2,
+  plus Autumn/Spring); dates are on store.steampowered.com/sale pages and SteamDB, not tested here; can be hard-coded per year.
+- **GitHub drop-pool history** — `gh search` finds no dedicated dataset repo. Closest: `azzaazeel/Next-js-Blog-Boilerplate-master`
+  `data-raw/CS2 Container Drop Pool.md` (repo licence MIT, but the text is a copy of a third-party article "CS2 Container Drop Pool [2026]
+  by ConteX", last edit 2026-03-30): one table with 47 cases, release date, date moved Active→Rare drop pool, and end date (2025-12-18
+  for 33 discontinued containers), 2013–2026. Plausible (Dead Hand 2026-03-12, Genesis 2025-09-17, 2025-12-18 matches the Steam update date)
+  but one-author, manual, stops at 2026-03, and copyright of the underlying text is unclear. `dnh33/cs2-terminal` `src/lib/cases.ts` has a
+  `pool: 'active'|'rare'|'discontinued'` snapshot (no dates of transitions, stale). No machine-readable history of weekly pool changes after
+  Dec 2025 other than the Steam posts above.
+
+| Event type | Free dated source | Coverage | Licence / ToS | Verdict |
+|---|---|---|---|---|
+| (1) Majors start/end | Wikipedia wikitable (or Liquipedia infobox via API) | 25 Majors, 2013-11 … 2026-12 | CC BY-SA 3.0/4.0, attribution | yes |
+| (2) Sticker capsule / souvenir releases | ByMykel `first_sale_date` (capsules), Steam news "…Capsule is now available" | capsules: 2014–2017 dense, then sparse; souvenir: 0/150 dated | MIT / Valve public feed | partly (no souvenirs; souvenir release = Major start, so derive from (1)) |
+| (3) Case releases | ByMykel (unreliable), ConteX table (47 cases) | 2013–2026 | MIT code, text copyright unclear | partly (dates need the ConteX table; hand-verified) |
+| (3) Drop-pool changes | ConteX table (ADP→RDP→end) for 2013–2025; Steam posts "WEEKLY CARE PACKAGE" 2023-09+ | 2013–2026-03; 2025-03, 2026-01 posts | as above | partly (manual, one source) |
+| (4) Operations | Steam news (2013-05 Payback … 2021-09 Riptide); ByMykel collections release_date | 2013–2021 | public feed | yes (11 operations, small N) |
+| (5) Big updates | Steam news `patchnotes` feed | 2023+ complete; 2015–2022 thin | public feed | yes for 2023+; partly before |
+| Steam sales | none via API; hard-code from SteamDB/store | — | — | yes (manual) |
+
+**Consequence for the plan:**
+- Event family is viable only with a **hand-curated `events.csv`** (date, type, note), seeded from: Wikipedia (Majors), Steam news
+  (patches 2023+, operations, capsule/Hub announcements, care-package changes) and the ConteX table (case release / pool transitions);
+  each row with its source URL. Do **not** use ByMykel `first_sale_date` for case dates (it is off by weeks to months; only 7/45 within 3 days).
+- Realistic sample size: 25 Majors (≈ 24 usable before today; souvenir/sticker release ≈ Major start), ~11 operations, ~45 case release/pool
+  moves, a handful of big updates. Fine for descriptive event-study plots around Majors; too few independent events for statistical claims on
+  anything but Majors and case pool exits. Recommendation: narrow the family to (1) Majors (capsule/souvenir window) and (3) case releases /
+  discontinuation (2025-12-18 and the ADP→RDP moves), with (5) as a small set of 2023+ markers (2025-07-16, 2025-10-22); drop pure
+  seasonal-sale and operation-based rules unless the first two show an effect.
+- Use the Wikipedia API (1 fetch, cached) and the Steam news API (keyless; 3 requests for the full history) in a one-off build script; if Liquipedia
+  is used, via the MediaWiki API only, UA with contact, gzip, ≤1 req/2 s (`parse` ≤1/30 s), attribution in the report. Attribute Wikipedia (CC BY-SA).
+- Open point: the ConteX text should be treated as a manual reference to re-verify against Steam posts/prices; do not redistribute it.

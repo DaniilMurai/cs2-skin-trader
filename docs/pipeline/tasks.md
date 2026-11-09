@@ -304,16 +304,33 @@ Until then they are skipped and the next task in order is taken.
       Executor: subagent
       Depends on: T-21
 
-- [ ] T-27 — Event and seasonal strategy
-      Files: src/cs2trader/strategies/event.py, data source TBD
-      Do: needs a dated event calendar (Majors, sticker capsule releases, case drop-pool
-          changes) — no source is known. First a spike: is there a free, dated, machine-
-          readable source (ByMykel `first_sale_date` covers case/capsule releases only)?
-          Then rules + implementation
-      DoD: spike S-09 answered in spikes/FINDINGS.md; if yes, the strategy runs at both
-           capitals; if no, a decision in decisions.md drops or narrows the family
+- [x] T-27 — Spike S-09: event calendar source *(answered 2026-11-09: partly — spikes/FINDINGS.md S-09)*
+
+- [ ] T-27a — Curated event list `docs/pipeline/events.csv` *(list, loader, builders and tests done 2026-11-09; the 90% first-point check waits for T-14)*
+      Files: docs/pipeline/events.csv, src/cs2trader/market/events.py, tests/test_events.py
+      Do: hand-curated rows (date, type, name, source_url): 25 Majors (start, end) from the
+          Wikipedia table via the MediaWiki API; ~45 case releases and drop-pool exits
+          (incl. 2025-12-18) from the third-party table, each re-checked against a Steam news
+          post or the Steam price history's first day; update markers 2025-07-16 and
+          2025-10-22. No ByMykel case dates. `load_events()` returns a polars frame
+      DoD: `uv run pytest tests/test_events.py` green: ≥ 25 Majors with start < end, no
+           duplicate (date, type, name), every row has a source URL; for ≥ 90% of case-release
+           rows the item's first Steam point is within 7 days of the listed date
       Executor: main loop
-      Depends on: T-21
+      Depends on: T-14
+
+- [ ] T-27b — Event strategy: Majors and case pool exits
+      Files: src/cs2trader/strategies/event.py, src/cs2trader/strategies/registry.py,
+             tests/test_event.py
+      Do: two rules from S-09 (only these have enough events): (1) hold the current Major's
+          sticker capsules from `pre` days before the Major starts to `post` days after it
+          ends; (2) buy a case when it leaves the active drop pool and hold `hold` days.
+          Events are known at their date only (a Major's dates are announced well before —
+          use the start date minus `pre` as the earliest decision day). Grid small.
+      DoD: `uv run pytest tests/test_event.py` green: no position before an event's decision
+           day; the look-ahead truncation test passes for this strategy; runs at both capitals
+      Executor: main loop
+      Depends on: T-27a, T-21
 
 ## F. Evaluation and report (Plan step 5, AC-11, AC-12, AC-13)
 

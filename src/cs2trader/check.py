@@ -87,7 +87,8 @@ def check_first_date(store: Store, universe: Sequence[str]) -> CheckResult:
     # No independent first-sale source exists, so items.release_date is the proxy.
     # Lower bound (every item with a release date): first point >= release - 1 day, since an item
     # cannot sell before it exists. Upper bound (only liquid items released after Steam history
-    # starts): first point <= release + 7 days. Items without release_date are skipped.
+    # starts): first point <= release + 7 days. Items without release_date are skipped, and so
+    # are cases: their DB date is a first_sale_date that misses real releases by −159…+329 days (S-09).
     rows = store.db.execute(f"""
         WITH f AS (
             SELECT p.name, CAST(min(p.ts) AS DATE) AS first_day, count(*) AS n
@@ -97,7 +98,7 @@ def check_first_date(store: Store, universe: Sequence[str]) -> CheckResult:
                f.first_day < i.release_date - INTERVAL 1 DAY AS too_early,
                (f.n >= {LIQUID_MIN_POINTS} AND i.release_date >= DATE '{HISTORY_START}'
                 AND f.first_day > i.release_date + INTERVAL {FIRST_DATE_WINDOW_DAYS} DAY) AS too_late
-        FROM f JOIN items i USING (name) WHERE i.release_date IS NOT NULL
+        FROM f JOIN items i USING (name) WHERE i.release_date IS NOT NULL AND i.category <> 'case'
     """).fetchall()
     bad = [r for r in rows if r[3] or r[4]]
     detail = f"{len(rows) - len(bad)}/{len(rows)} items with a release date consistent"

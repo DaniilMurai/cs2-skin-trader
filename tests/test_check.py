@@ -55,8 +55,10 @@ def test_coverage_fails(tmp_path):
 def test_first_date_fails_before_release_and_too_late(tmp_path):
     store = good_store(tmp_path)
     store.db.execute("UPDATE items SET release_date = DATE '2024-02-01' WHERE name = 'Recoil Case'")
+    assert run(store)["first_date"].ok  # case dates in the DB are unreliable (S-09): skipped
+    store.db.execute("UPDATE items SET release_date = DATE '2024-02-01' WHERE name LIKE 'Sticker%'")
     assert not run(store)["first_date"].ok
-    store.db.execute("UPDATE items SET release_date = DATE '2023-12-01' WHERE name = 'Recoil Case'")
+    store.db.execute("UPDATE items SET release_date = DATE '2023-12-01' WHERE name LIKE 'Sticker%'")
     assert not run(store)["first_date"].ok
 
 

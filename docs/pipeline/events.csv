@@ -1,0 +1,159 @@
+date,type,name,source_url
+2013-08-14,case_release,CS:GO Weapon Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2013-08-14,case_release,eSports 2013 Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2013-09-19,case_release,Operation Bravo Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2013-11-28,major_start,Jönköping 2013,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2013-11-28,case_to_rare_pool,CS:GO Weapon Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2013-11-30,major_end,Jönköping 2013,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2013-12-18,case_discontinued,eSports 2013 Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2013-12-18,case_release,Winter Offensive Weapon Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2013-12-18,case_release,eSports 2013 Winter Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2014-02-05,case_to_rare_pool,Operation Bravo Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2014-02-20,case_release,Operation Phoenix Weapon Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2014-03-13,major_start,Katowice 2014,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2014-03-16,major_end,Katowice 2014,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2014-05-01,case_release,Huntsman Weapon Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2014-07-01,case_release,Operation Breakout Weapon Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2014-07-10,case_discontinued,eSports 2013 Winter Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2014-07-10,case_release,eSports 2014 Summer Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2014-08-14,major_start,Cologne 2014,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2014-08-17,major_end,Cologne 2014,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2014-10-01,case_to_rare_pool,Winter Offensive Weapon Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2014-11-11,case_release,Operation Vanguard Weapon Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2014-11-27,major_start,Jönköping 2014,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2014-11-29,major_end,Jönköping 2014,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2015-01-08,case_release,Chroma Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2015-03-12,major_start,Katowice 2015,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2015-03-15,major_end,Katowice 2015,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2015-03-31,case_to_rare_pool,Operation Vanguard Weapon Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2015-04-15,case_release,Chroma 2 Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2015-04-15,case_to_rare_pool,Huntsman Weapon Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2015-05-26,case_release,Falchion Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2015-08-20,major_start,Cologne 2015,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2015-08-23,major_end,Cologne 2015,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2015-09-17,case_discontinued,eSports 2014 Summer Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2015-09-17,case_release,Shadow Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2015-09-17,case_to_rare_pool,Chroma Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2015-10-28,major_start,Cluj-Napoca 2015,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2015-11-01,major_end,Cluj-Napoca 2015,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2015-12-08,case_release,Revolver Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2015-12-08,case_to_rare_pool,Operation Phoenix Weapon Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2016-02-17,case_release,Operation Wildfire Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2016-03-29,major_start,Columbus 2016,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2016-04-03,major_end,Columbus 2016,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2016-04-20,case_to_rare_pool,Operation Breakout Weapon Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2016-04-27,case_release,Chroma 3 Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2016-06-15,case_release,Gamma Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2016-06-15,case_to_rare_pool,Falchion Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2016-07-05,major_start,Cologne 2016,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2016-07-10,major_end,Cologne 2016,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2016-08-18,case_release,Gamma 2 Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2016-08-18,case_to_rare_pool,Shadow Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2016-11-28,case_release,Glove Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2017-01-22,major_start,Atlanta 2017,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2017-01-29,major_end,Atlanta 2017,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2017-03-15,case_release,Spectrum Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2017-03-15,case_to_rare_pool,Chroma 2 Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2017-05-23,case_release,Operation Hydra Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2017-07-16,major_start,Kraków 2017,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2017-07-23,major_end,Kraków 2017,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2017-09-14,case_release,Spectrum 2 Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2017-09-14,case_to_rare_pool,Operation Wildfire Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2017-11-13,case_to_rare_pool,Operation Hydra Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2018-01-12,major_start,Boston 2018,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2018-01-22,major_end,Boston 2018,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2018-02-15,case_release,Clutch Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2018-02-15,case_to_rare_pool,Gamma Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2018-08-02,case_release,Horizon Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2018-09-05,major_start,London 2018,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2018-09-23,major_end,London 2018,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2018-12-06,case_release,Danger Zone Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2018-12-06,case_to_rare_pool,Glove Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2019-02-13,major_start,Katowice 2019,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2019-03-03,major_end,Katowice 2019,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2019-03-13,case_release,Prisma Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2019-03-13,case_to_rare_pool,Spectrum Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2019-08-23,major_start,Berlin 2019,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2019-09-08,major_end,Berlin 2019,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2019-10-18,case_release,CS20 Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2019-11-18,case_release,Shattered Web Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2020-03-31,case_release,Prisma 2 Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2020-03-31,case_to_rare_pool,Shattered Web Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2020-08-06,case_release,Fracture Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2020-12-03,case_release,Operation Broken Fang Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2021-05-03,case_release,Snakebite Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2021-05-03,case_to_rare_pool,Operation Broken Fang Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2021-05-03,case_to_rare_pool,Prisma Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2021-06-03,case_to_rare_pool,CS20 Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2021-06-03,case_to_rare_pool,Chroma 3 Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2021-06-03,case_to_rare_pool,Gamma 2 Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2021-06-03,case_to_rare_pool,Horizon Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2021-06-03,case_to_rare_pool,Revolver Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2021-06-03,case_to_rare_pool,Spectrum 2 Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2021-09-22,case_release,Operation Riptide Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2021-10-26,major_start,Stockholm 2021,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2021-11-07,major_end,Stockholm 2021,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2022-01-18,case_to_rare_pool,Danger Zone Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2022-01-20,case_release,Dreams & Nightmares Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2022-02-21,case_to_rare_pool,Operation Riptide Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2022-05-09,major_start,Antwerp 2022,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2022-05-22,major_end,Antwerp 2022,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2022-07-01,case_release,Recoil Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2022-07-01,case_to_rare_pool,Prisma 2 Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2022-10-31,major_start,Rio 2022,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2022-11-13,major_end,Rio 2022,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2023-02-09,case_release,Revolution Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2023-02-10,case_to_rare_pool,Clutch Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2023-05-08,major_start,Paris 2023,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2023-05-21,major_end,Paris 2023,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2024-02-07,case_release,Kilowatt Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2024-02-07,case_to_rare_pool,Snakebite Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2024-03-17,major_start,Copenhagen 2024,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2024-03-31,major_end,Copenhagen 2024,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2024-10-02,case_release,Gallery Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2024-11-30,major_start,Shanghai 2024,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2024-12-15,major_end,Shanghai 2024,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2025-04-01,case_release,Fever Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-06-03,major_start,Austin 2025,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2025-06-22,major_end,Austin 2025,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2025-07-16,update,Trade protection (7-day reversible trades),https://store.steampowered.com/news/app/730
+2025-09-17,case_release,Sealed Genesis Terminal,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-09-17,case_to_rare_pool,Fracture Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-10-02,case_to_rare_pool,Gallery Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-10-22,update,Covert trade-up to knives and gloves,https://store.steampowered.com/news/app/730
+2025-11-24,major_start,Budapest 2025,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2025-12-14,major_end,Budapest 2025,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2025-12-18,case_discontinued,CS20 Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-12-18,case_discontinued,CS:GO Weapon Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-12-18,case_discontinued,Chroma 2 Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-12-18,case_discontinued,Chroma 3 Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-12-18,case_discontinued,Chroma Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-12-18,case_discontinued,Clutch Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-12-18,case_discontinued,Danger Zone Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-12-18,case_discontinued,Falchion Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-12-18,case_discontinued,Fracture Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-12-18,case_discontinued,Gamma 2 Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-12-18,case_discontinued,Gamma Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-12-18,case_discontinued,Glove Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-12-18,case_discontinued,Horizon Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-12-18,case_discontinued,Huntsman Weapon Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-12-18,case_discontinued,Operation Bravo Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-12-18,case_discontinued,Operation Breakout Weapon Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-12-18,case_discontinued,Operation Hydra Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-12-18,case_discontinued,Operation Phoenix Weapon Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-12-18,case_discontinued,Operation Vanguard Weapon Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-12-18,case_discontinued,Operation Wildfire Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-12-18,case_discontinued,Prisma 2 Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-12-18,case_discontinued,Prisma Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-12-18,case_discontinued,Revolver Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-12-18,case_discontinued,Shadow Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-12-18,case_discontinued,Snakebite Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-12-18,case_discontinued,Spectrum 2 Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-12-18,case_discontinued,Spectrum Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2025-12-18,case_discontinued,Winter Offensive Weapon Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2026-03-12,case_discontinued,Recoil Case,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2026-03-12,case_release,Sealed Dead Hand Terminal,https://github.com/azzaazeel/Next-js-Blog-Boilerplate-master/blob/main/data-raw/CS2%20Container%20Drop%20Pool.md
+2026-06-02,major_start,Cologne 2026,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2026-06-21,major_end,Cologne 2026,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2026-11-25,major_start,Singapore 2026,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships
+2026-12-13,major_end,Singapore 2026,https://en.wikipedia.org/wiki/Counter-Strike_Major_Championships

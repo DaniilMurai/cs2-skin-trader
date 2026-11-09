@@ -146,3 +146,17 @@ def test_empty_item_and_empty_canary_is_auth_error():
     empty = {"success": True, "price_prefix": "", "price_suffix": "₴", "prices": []}
     with pytest.raises(SteamAuthError):
         client([httpx.Response(200, json=empty)] * 2).price_history("x")
+
+
+def test_merge_from_other_store(tmp_path):
+    from cs2trader.backfill import merge_from
+
+    other = Store(tmp_path / "other")
+    backfill(other, FakeSource(), NAMES[:3], FX, echo=lambda _: None)
+    other.db.close()
+    main = Store(tmp_path / "main")
+    backfill(main, FakeSource(), NAMES[2:4], FX, echo=lambda _: None)
+    counts = merge_from(main, tmp_path / "other")
+    assert counts == {"steam_points": 9, "steam_fetch_log": 3}
+    assert main.fetched_names() == set(NAMES[:4])
+    assert count(main) == 12

@@ -76,3 +76,24 @@ def request_logger(path: Path) -> Callable[[datetime, int], None]:
             f.write(f"{ts.isoformat()}\t{status}\n")
 
     return log
+
+
+def merge_from(store: Store, other_data_dir: Path) -> dict[str, int]:
+    """Copy Steam history and fetch log from another data dir (a backfill run kept apart so its
+    long write lock doesn't block other commands). Rows already here are replaced."""
+    src = other_data_dir / "cs2.duckdb"
+    store.db.execute(f"ATTACH '{src}' AS other (READ_ONLY)")
+    try:
+        counts = {}
+        for table in ("steam_points", "steam_fetch_log"):
+            store.db.execute(f"INSERT OR REPLACE INTO {table} SELECT * FROM other.{table}")
+            counts[table] = store.db.execute(f"SELECT count(*) FROM other.{table}").fetchall()[0][0]
+        log = other_data_dir / "logs" / "steam_requests.tsv"
+        if log.exists():
+            mine = store.data_dir / "logs" / "steam_requests.tsv"
+            mine.parent.mkdir(parents=True, exist_ok=True)
+            with mine.open("a") as f:
+                f.write(log.read_text())
+        return counts
+    finally:
+        store.db.execute("DETACH other")
