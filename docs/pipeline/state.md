@@ -123,6 +123,9 @@ Next action: wait for T-14 (Steam backfill in data/backfill/, ~28 h from 2026-11
 - 2026-11-09 — Report (T-31): rows strategy × capital × period (walk_forward = fold test runs chained,
   holdout, holdout_stress, per-fold rows) × regime × unit; cash and bh_universe always evaluated;
   hash over the results table only. POLARS_MAX_THREADS defaults to 1 (2m50s → 83 s, same hash).
+- 2026-11-09 — Code repo public at github.com/DaniilMurai/cs2-skin-trader (author's choice, for
+  unlimited Actions minutes); data stays in the private `cs2-skin-data`. Commits use the GitHub
+  noreply address (history rewritten before the first push, author's choice).
 - 2026-11-09 — Task order: the market.csgo collector (T-02…T-10) before the Steam backfill
   and everything else — collector days can't be recovered later.
 - 2026-11-09 — Event/seasonal strategy family has no known dated event source → spike S-09

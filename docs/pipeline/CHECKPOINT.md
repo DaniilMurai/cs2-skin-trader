@@ -26,12 +26,11 @@ verified task, stop only for questions only the author can answer). Last commit:
 
 ## Left
 **Needs the author:**
-1. T-08 GitHub setup (steps in `ops/README.md`): push this repo, create private `cs2-skin-data`,
-   token with contents:write on it only, secrets `DATA_REPO_TOKEN` + `MARKETCSGO_API_KEY`.
-   **Open question:** Actions minutes. A private repo has 2,000 free min/month; hourly asks+bids
-   ≈ 1 min/run (~720 min/month) fits, but sales polling at the 4,800-name cap ≈ 10 min/run
-   (~7,200 min/month) does not. Choose: make the code repo public (unlimited minutes), or lower
-   `mc.sales_max_names_per_run` for GHA, or poll sales from the Mac only.
+1. T-08 GitHub setup (steps 2–5 in `ops/README.md`). The code repo is already public at
+   https://github.com/DaniilMurai/cs2-skin-trader (public → unlimited Actions minutes, so the
+   hourly sales polling fits). Left: private `cs2-skin-data` with one commit, a token with
+   contents:write on it only, secrets `DATA_REPO_TOKEN` + `MARKETCSGO_API_KEY`. Until then the
+   hourly workflow fails each run.
 2. T-09 install the launchd job (`ops/README.md`).
 
 **After the backfill finishes (in this order):**

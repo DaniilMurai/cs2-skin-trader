@@ -6,7 +6,7 @@
 new Parquet files to the private repo `cs2-skin-data` (same tree as `data/collector/`).
 
 One-time setup:
-1. Push this repo to GitHub.
+1. Push this repo to GitHub (done 2026-11-09: public, github.com/DaniilMurai/cs2-skin-trader).
 2. Create the private repo `cs2-skin-data` under the same owner with one initial commit.
 3. Create a fine-grained token with Contents: read and write on `cs2-skin-data` only.
 4. In this repo, Settings → Secrets and variables → Actions, add `DATA_REPO_TOKEN` (the token)
