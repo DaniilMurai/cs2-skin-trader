@@ -9,3 +9,4 @@ max_retries = 3
 [mc]
 interval_s = 2.5
 sales_batch = 20
+data_repo = "https://github.com/DaniilMurai/cs2-skin-data.git"

@@ -1,0 +1,57 @@
+name: collect
+
+on:
+  schedule:
+    # Off the top of the hour: GitHub delays or drops scheduled runs at :00 under load.
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: collect
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check out the data repo into data/collector
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/cs2-skin-data
+          token: ${{ secrets.DATA_REPO_TOKEN }}
+          path: data/collector
+          fetch-depth: 1
+          # The run needs only past sales (for polling tiers); asks/bids grow ~13 MB a day and
+          # the run writes a fresh asks snapshot before polling sales.
+          sparse-checkout: |
+            sales
+            sales_polls
+
+      - uses: astral-sh/setup-uv@v6
+
+      - run: uv sync --frozen
+
+      - name: Collect
+        id: collect
+        env:
+          MARKETCSGO_API_KEY: ${{ secrets.MARKETCSGO_API_KEY }}
+        run: uv run cs2 collect run --kinds asks,bids,sales --host gha
+        continue-on-error: true
+
+      - name: Push new files
+        working-directory: data/collector
+        run: |
+          git config user.name "cs2-collector"
+          git config user.email "cs2-collector@users.noreply.github.com"
+          git add --sparse -A
+          git diff --cached --quiet && exit 0
+          git commit -q -m "snapshot $(date -u +%Y-%m-%dT%H:%MZ)"
+          for i in 1 2 3; do git pull -q --rebase && git push -q && exit 0; sleep 10; done
+          exit 1
+
+      - name: Fail the run if a kind failed
+        if: steps.collect.outcome == 'failure'
+        run: exit 1

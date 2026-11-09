@@ -1,0 +1,318 @@
+{
+ "agent-4613": {
+  "id": "agent-4613",
+  "name": "Bloody Darryl The Strapped | The Professionals",
+  "market_hash_name": "Bloody Darryl The Strapped | The Professionals",
+  "rarity": {
+   "name": "Superior"
+  }
+ },
+ "collectible-5110": {
+  "id": "collectible-5110",
+  "name": "Austin 2025 Viewer Pass",
+  "market_hash_name": "Austin 2025 Viewer Pass",
+  "type": "Tournament Pass",
+  "rarity": {
+   "name": "Base Grade"
+  }
+ },
+ "crate-4837": {
+  "id": "crate-4837",
+  "name": "Antwerp 2022 Dust II Souvenir Package",
+  "market_hash_name": "Antwerp 2022 Dust II Souvenir Package",
+  "type": "Souvenir",
+  "first_sale_date": null,
+  "rarity": {
+   "name": "Base Grade"
+  }
+ },
+ "crate-4846": {
+  "id": "crate-4846",
+  "name": "Recoil Case",
+  "market_hash_name": "Recoil Case",
+  "type": "Case",
+  "first_sale_date": "2022-05-30",
+  "rarity": {
+   "name": "Base Grade"
+  }
+ },
+ "crate-4847": {
+  "id": "crate-4847",
+  "name": "10 Year Birthday Sticker Capsule",
+  "market_hash_name": "10 Year Birthday Sticker Capsule",
+  "type": "Sticker Capsule",
+  "first_sale_date": "2022/06/15",
+  "rarity": {
+   "name": "Base Grade"
+  }
+ },
+ "crate-7019": {
+  "id": "crate-7019",
+  "name": "Deluge Music Kit Box",
+  "market_hash_name": "Deluge Music Kit Box",
+  "type": "Music Kit Box",
+  "first_sale_date": "2025-06-27",
+  "rarity": {
+   "name": "Base Grade"
+  }
+ },
+ "graffiti-2537": {
+  "id": "graffiti-2537",
+  "name": "Sealed Graffiti | 100 Thieves | Boston 2018",
+  "market_hash_name": "Sealed Graffiti | 100 Thieves | Boston 2018",
+  "rarity": {
+   "name": "High Grade"
+  }
+ },
+ "music_kit-87": {
+  "id": "music_kit-87",
+  "name": "Music Kit | Adam Beyer, Red Room",
+  "market_hash_name": "Music Kit | Adam Beyer, Red Room",
+  "rarity": {
+   "name": "High Grade"
+  }
+ },
+ "patch-4937": {
+  "id": "patch-4937",
+  "name": "Patch | Abandon Hope",
+  "market_hash_name": "Patch | Abandon Hope",
+  "rarity": {
+   "name": "High Grade"
+  }
+ },
+ "skin-51c5ce405526_0": {
+  "id": "skin-51c5ce405526_0",
+  "skin_id": "skin-51c5ce405526",
+  "name": "★ Hand Wraps | Arboreal (Factory New)",
+  "market_hash_name": "★ Hand Wraps | Arboreal (Factory New)",
+  "weapon": {
+   "name": "Hand Wraps"
+  },
+  "category": {
+   "name": "Gloves"
+  },
+  "rarity": {
+   "name": "Extraordinary"
+  }
+ },
+ "skin-e2344261c5cb_2": {
+  "id": "skin-e2344261c5cb_2",
+  "skin_id": "skin-e2344261c5cb",
+  "name": "★ Sport Gloves | Amphibious (Field-Tested)",
+  "market_hash_name": "★ Sport Gloves | Amphibious (Field-Tested)",
+  "weapon": {
+   "name": "Sport Gloves"
+  },
+  "category": {
+   "name": "Gloves"
+  },
+  "rarity": {
+   "name": "Extraordinary"
+  }
+ },
+ "skin-91a429af4a60_1": {
+  "id": "skin-91a429af4a60_1",
+  "skin_id": "skin-91a429af4a60",
+  "name": "AK-47 | Redline (Field-Tested)",
+  "market_hash_name": "AK-47 | Redline (Field-Tested)",
+  "weapon": {
+   "name": "AK-47"
+  },
+  "category": {
+   "name": "Rifles"
+  },
+  "rarity": {
+   "name": "Classified"
+  }
+ },
+ "skin-bb633c21fc25_0_st": {
+  "id": "skin-bb633c21fc25_0_st",
+  "skin_id": "skin-bb633c21fc25",
+  "name": "StatTrak™ AWP | Asiimov (Field-Tested)",
+  "market_hash_name": "StatTrak™ AWP | Asiimov (Field-Tested)",
+  "weapon": {
+   "name": "AWP"
+  },
+  "category": {
+   "name": "Rifles"
+  },
+  "rarity": {
+   "name": "Covert"
+  }
+ },
+ "skin-9e9b9cd050d5_0_so": {
+  "id": "skin-9e9b9cd050d5_0_so",
+  "skin_id": "skin-9e9b9cd050d5",
+  "name": "Souvenir AWP | Acheron (Factory New)",
+  "market_hash_name": "Souvenir AWP | Acheron (Factory New)",
+  "weapon": {
+   "name": "AWP"
+  },
+  "category": {
+   "name": "Rifles"
+  },
+  "rarity": {
+   "name": "Mil-Spec Grade"
+  }
+ },
+ "skin-e655cd4b41ee_2_st": {
+  "id": "skin-e655cd4b41ee_2_st",
+  "skin_id": "skin-e655cd4b41ee",
+  "name": "★ StatTrak™ Bayonet | Autotronic (Field-Tested)",
+  "market_hash_name": "★ StatTrak™ Bayonet | Autotronic (Field-Tested)",
+  "weapon": {
+   "name": "Bayonet"
+  },
+  "category": {
+   "name": "Knives"
+  },
+  "rarity": {
+   "name": "Covert"
+  }
+ },
+ "skin-525ac56c082c_0": {
+  "id": "skin-525ac56c082c_0",
+  "skin_id": "skin-525ac56c082c",
+  "name": "★ Karambit | Doppler (Factory New)",
+  "market_hash_name": "★ Karambit | Doppler (Factory New)",
+  "weapon": {
+   "name": "Karambit"
+  },
+  "category": {
+   "name": "Knives"
+  },
+  "rarity": {
+   "name": "Covert"
+  }
+ },
+ "skin-a7465b45d267_0": {
+  "id": "skin-a7465b45d267_0",
+  "skin_id": "skin-a7465b45d267",
+  "name": "★ Karambit | Doppler (Factory New)",
+  "market_hash_name": "★ Karambit | Doppler (Factory New)",
+  "weapon": {
+   "name": "Karambit"
+  },
+  "category": {
+   "name": "Knives"
+  },
+  "rarity": {
+   "name": "Covert"
+  }
+ },
+ "skin-e7fd9a1907bb_0": {
+  "id": "skin-e7fd9a1907bb_0",
+  "skin_id": "skin-e7fd9a1907bb",
+  "name": "★ Karambit | Doppler (Factory New)",
+  "market_hash_name": "★ Karambit | Doppler (Factory New)",
+  "weapon": {
+   "name": "Karambit"
+  },
+  "category": {
+   "name": "Knives"
+  },
+  "rarity": {
+   "name": "Covert"
+  }
+ },
+ "skin-1905a0ed952b_0": {
+  "id": "skin-1905a0ed952b_0",
+  "skin_id": "skin-1905a0ed952b",
+  "name": "★ Karambit | Doppler (Factory New)",
+  "market_hash_name": "★ Karambit | Doppler (Factory New)",
+  "weapon": {
+   "name": "Karambit"
+  },
+  "category": {
+   "name": "Knives"
+  },
+  "rarity": {
+   "name": "Covert"
+  }
+ },
+ "skin-d79f9a05870e_0": {
+  "id": "skin-d79f9a05870e_0",
+  "skin_id": "skin-d79f9a05870e",
+  "name": "★ Karambit | Doppler (Factory New)",
+  "market_hash_name": "★ Karambit | Doppler (Factory New)",
+  "weapon": {
+   "name": "Karambit"
+  },
+  "category": {
+   "name": "Knives"
+  },
+  "rarity": {
+   "name": "Covert"
+  }
+ },
+ "skin-e9fb2b0e49e8_0": {
+  "id": "skin-e9fb2b0e49e8_0",
+  "skin_id": "skin-e9fb2b0e49e8",
+  "name": "★ Karambit | Doppler (Factory New)",
+  "market_hash_name": "★ Karambit | Doppler (Factory New)",
+  "weapon": {
+   "name": "Karambit"
+  },
+  "category": {
+   "name": "Knives"
+  },
+  "rarity": {
+   "name": "Covert"
+  }
+ },
+ "skin-18a2a3a04055_0": {
+  "id": "skin-18a2a3a04055_0",
+  "skin_id": "skin-18a2a3a04055",
+  "name": "★ Karambit | Doppler (Factory New)",
+  "market_hash_name": "★ Karambit | Doppler (Factory New)",
+  "weapon": {
+   "name": "Karambit"
+  },
+  "category": {
+   "name": "Knives"
+  },
+  "rarity": {
+   "name": "Covert"
+  }
+ },
+ "sticker-6027": {
+  "id": "sticker-6027",
+  "name": "Sticker | 00 Nation (Holo) | Rio 2022",
+  "market_hash_name": "Sticker | 00 Nation (Holo) | Rio 2022",
+  "type": "Team",
+  "rarity": {
+   "name": "Exotic"
+  }
+ },
+ "keychain-78": {
+  "id": "keychain-78",
+  "name": "Charm | 8 Ball IGL",
+  "market_hash_name": "Charm | 8 Ball IGL",
+  "rarity": {
+   "name": "Extraordinary"
+  }
+ },
+ "collection-set-community-2": {
+  "id": "collection-set-community-2",
+  "name": "The Phoenix Collection",
+  "release_date": "2014-02-21",
+  "contains": [
+   {
+    "id": "skin-91a429af4a60"
+   },
+   {
+    "id": "skin-bb633c21fc25"
+   }
+  ]
+ },
+ "collection-set-nuke-2": {
+  "id": "collection-set-nuke-2",
+  "name": "The 2018 Nuke Collection",
+  "release_date": "2018-09-01",
+  "contains": [
+   {
+    "id": "skin-9e9b9cd050d5"
+   }
+  ]
+ }
+}

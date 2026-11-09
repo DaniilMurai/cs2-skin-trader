@@ -6,8 +6,10 @@ from pathlib import Path
 
 from cs2trader.backfill import backfill, feed_universe, read_names, request_logger
 from cs2trader.backtest.engine import run
+from cs2trader.collect import pull_remote, run_collect, worst_error
 from cs2trader.config import load_settings, require_secret
-from cs2trader.errors import Cs2Error, SteamAuthError
+from cs2trader.errors import ConfigError, Cs2Error, SteamAuthError
+from cs2trader.items import update_items
 from cs2trader.models import RunSpec
 from cs2trader.sources import fx, steam
 from cs2trader.store import Store
@@ -67,6 +69,40 @@ def cmd_backtest(args: argparse.Namespace) -> None:
     print(f"fees paid {last['fees_paid']:.2f}; out: {out}")
 
 
+def cmd_items_update(args: argparse.Namespace) -> None:
+    settings = load_settings()
+    rep = update_items(Store(settings.data_dir), None, settings.data_dir / "cache")
+    counts = ", ".join(f"{k} {v}" for k, v in sorted(rep["counts"].items(), key=lambda kv: -kv[1]))
+    print(f"items: {rep['n']} classified; unknown {rep['unknown']} ({rep['unknown_share']:.2%})")
+    print(f"  {counts}")
+    for name in rep["unknown_names"]:
+        print(f"  unknown: {name}")
+
+
+def cmd_collect_pull(args: argparse.Namespace) -> None:
+    settings = load_settings()
+    print(f"pull: {pull_remote(Store(settings.data_dir), settings.mc.data_repo)} files added")
+
+
+def cmd_collect_run(args: argparse.Namespace) -> None:
+    kinds = [k.strip() for k in args.kinds.split(",") if k.strip()]
+    bad = sorted(set(kinds) - {"asks", "bids", "sales"})
+    if bad or not kinds:
+        raise ConfigError(f"--kinds: unknown {bad or 'empty list'}; use asks,bids,sales")
+    overrides = {"mc.sales_max_names_per_run": args.sales_max} if args.sales_max is not None else {}
+    settings = load_settings(**overrides)
+    _report, failed, rows = run_collect(Store(settings.data_dir), kinds, args.host, datetime.now(UTC), settings)
+    for kind in kinds:
+        if kind in failed:
+            saved = f", {rows_saved} rows saved" if (rows_saved := getattr(failed[kind], "rows_saved", 0)) else ""
+            print(f"{kind}: failed ({type(failed[kind]).__name__}: {failed[kind]}){saved}")
+        else:
+            print(f"{kind}: ok, {rows[kind]} rows")
+    worst = worst_error(list(failed.values()))
+    if worst is not None:
+        sys.exit(worst.exit_code)
+
+
 def main() -> None:
     p = argparse.ArgumentParser(prog="cs2")
     sub = p.add_subparsers(required=True)
@@ -80,6 +116,17 @@ def main() -> None:
     st.add_argument("--limit", type=int)
     st.add_argument("--refresh", action="store_true")
     st.set_defaults(func=cmd_backfill_steam)
+
+    it = sub.add_parser("items").add_subparsers(required=True)
+    it.add_parser("update").set_defaults(func=cmd_items_update)
+
+    co = sub.add_parser("collect").add_subparsers(required=True)
+    cr = co.add_parser("run")
+    cr.add_argument("--kinds", default="asks,bids,sales")
+    cr.add_argument("--host", choices=["gha", "mac"], required=True)
+    cr.add_argument("--sales-max", type=int, help="override mc.sales_max_names_per_run")
+    cr.set_defaults(func=cmd_collect_run)
+    co.add_parser("pull").set_defaults(func=cmd_collect_pull)
 
     bt = sub.add_parser("backtest")
     bt.add_argument("--strategy", required=True)

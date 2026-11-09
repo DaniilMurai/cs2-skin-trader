@@ -219,7 +219,7 @@ class MarketCsgoKeyed:
 def fetch_rates(base: Literal["UAH", "RUB"], start: date, end: date) -> list[FxRate]: ...  # gap-free, forward-filled
 
 # cs2trader/sources/items_db.py
-def fetch_items_db() -> list[dict[str, Any]]: ...  # ByMykel all.json, raw records
+def fetch_items_db(cache_dir: Path) -> list[dict[str, Any]]: ...  # ByMykel all.json, cached raw, re-downloaded once per UTC day
 def classify(names: Sequence[str], db: Sequence[Mapping[str, Any]]) -> list[ItemInfo]: ...
 
 # cs2trader/store.py
@@ -241,7 +241,7 @@ def collect_once(store: Store, kinds: Sequence[Literal["asks", "bids", "sales"]]
                  host: Literal["gha", "mac"], now: datetime) -> CollectReport: ...
 def sales_due(store: Store, now: datetime) -> list[str]: ...  # tiered by observed sales/day
 def collect_status(store: Store, window_h: int = 48) -> CollectStatus: ...  # AC-3
-def pull_remote(store: Store) -> int: ...      # merge snapshots from the remote data store; files added
+def pull_remote(store: Store, repo_url: str) -> int: ...  # git clone/pull of `mc.data_repo` into data/collector; files added
 
 @dataclass(frozen=True)
 class CollectReport:
@@ -372,7 +372,8 @@ DuckDB tables (identity key in **bold**; writes are upserts on it):
 Views over Parquet: `asks`, `bids` (dedup on **(feed_time, name)**: GHA and the Mac may record
 the same feed state; same `feed_time` = same file content), `sales` (dedup on
 **(name, ts, price_raw)** — two real sales with identical second and price collapse into one;
-accepted, S-07), `daily_bars` (Steam daily points + hourly tail aggregated to days:
+accepted, S-07), `sales_polls` (polled_at, host, name — one row per name per sales poll, so an
+item with zero sales isn't re-polled every run; such items wait for the largest tier), `daily_bars` (Steam daily points + hourly tail aggregated to days:
 volume-weighted mean price, summed volume).
 
 **Steam USD conversion (S-08).** `price_usd = price_raw / fx_per_usd` where `fx_per_usd` is the
@@ -426,7 +427,7 @@ business days only → forward-filled (`filled=True`); value = `Value / Nominal`
 dict of records keyed by `<type>-<id>`; fields used per S-04 (`market_hash_name` or `name`,
 `category`, `weapon.name`, `rarity.name`, `stattrak`, `souvenir`; crates: `type`,
 `first_sale_date` `"YYYY/MM/DD"`, `contains`; collections: `release_date`, `contains`).
-Fetched at most daily; only the compact `items` table is stored.
+Fetched at most daily; the raw file is cached in `data/cache/` (gitignored) and the compact `items` table is stored.
 
 ## Configuration
 
@@ -443,7 +444,9 @@ Source: `cs2.toml` at the repo root (committed, no secrets) < CLI flags. Missing
 | `backfill.universe` | `"feed"` \| path | `feed` | all names in today's asks feed (~27.2k, ≈ 19 h) |
 | `mc.interval_s` | float | 2.5 | keyed API; docs: > 5 req/s deletes the key |
 | `mc.sales_batch` | int | 20 | 50 → HTTP 500, S-07 |
+| `mc.sales_max_names_per_run` | int | 4800 | cap per run: 240 batches × 2.5 s ≈ 10 min; overdue names first, then never-fetched |
 | `mc.sales_refill_share` | float | 0.5 | re-poll an item when half its 100-sale window has elapsed |
+| `mc.data_repo` | str | `""` | git URL of `cs2-skin-data`, for `cs2 collect pull` |
 | `mc.sales_tiers_h` | list[int] | [1, 6, 24] | poll intervals; an item gets the largest one ≤ its due time |
 | `universe.min_history_days` | int | 30 | days of Steam history before the item can enter |
 | `universe.min_median_volume` | int | 5 | trailing 30-day median daily sales |

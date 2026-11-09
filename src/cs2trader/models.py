@@ -1,11 +1,43 @@
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import date, datetime
+from enum import StrEnum
 from typing import Any, Literal
 
 import polars as pl
 
 Currency = Literal["USD", "UAH", "RUB"]
+
+
+class Category(StrEnum):
+    # values from spike S-04; `unknown` must stay <= 1% (AC-4)
+    KNIFE = "knife"
+    GLOVE = "glove"
+    WEAPON_SKIN = "weapon_skin"
+    STICKER = "sticker"
+    CASE = "case"
+    CAPSULE = "capsule"
+    SOUVENIR_PACKAGE = "souvenir_package"
+    GRAFFITI = "graffiti"
+    CHARM = "charm"
+    PATCH = "patch"
+    MUSIC_KIT = "music_kit"
+    MUSIC_KIT_BOX = "music_kit_box"
+    AGENT = "agent"
+    OTHER = "other"
+    UNKNOWN = "unknown"
+
+
+@dataclass(frozen=True)
+class ItemInfo:
+    market_hash_name: str
+    category: Category
+    source: Literal["db", "rule", "none"]
+    weapon: str | None
+    rarity: str | None
+    stattrak: bool
+    souvenir: bool
+    release_date: date | None
 
 
 @dataclass(frozen=True)

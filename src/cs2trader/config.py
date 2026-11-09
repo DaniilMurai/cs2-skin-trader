@@ -49,8 +49,11 @@ class BackfillSettings:
 class McSettings:
     interval_s: float = 2.5
     sales_batch: int = 20
+    # 20 names x (600 s / 2.5 s) = 4800 names = 240 requests: one run stays within ~10 minutes
+    sales_max_names_per_run: int = 4800
     sales_refill_share: float = 0.5
     sales_tiers_h: list[int] = field(default_factory=lambda: [1, 6, 24])
+    data_repo: str = ""
 
 
 @dataclass(frozen=True)

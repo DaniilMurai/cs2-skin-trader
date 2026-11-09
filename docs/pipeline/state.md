@@ -8,7 +8,7 @@ Author's standing instruction (2026-11-09): work through tasks autonomously, com
 task or batch without asking; stop only for questions that need the author.
 Gates: passed up to and including stage 6 (author's go to stage 7, 2026-11-09)
 
-Next action: T-07 (collect run) and T-12 (items). Done 2026-11-09: T-01…T-06, T-11, T-15, T-18.
+Next action: T-13 (data check), T-10 (collect status code); T-14 full backfill running; T-08/T-09 files ready, waiting for the author's GitHub setup and launchd install. Done 2026-11-09: T-01…T-07, T-11, T-12, T-15, T-18.
 
 ## Stage history
 - 0 context load — 2026-11-09 (new project: README only, no git, Python 3.14.7, uv)
@@ -78,6 +78,14 @@ Next action: T-07 (collect run) and T-12 (items). Done 2026-11-09: T-01…T-06, 
   `data/logs/steam_requests.tsv` for the rate check (T-13).
 - 2026-11-09 — Sales polling (T-06): never-fetched names from the latest asks snapshot are due;
   an item with zero sales leaves no rows and is re-polled every run → T-07 caps the batch.
+- 2026-11-09 — Collector (T-07): exit-code priority when several kinds fail: 5, 3, 2, 4; sales capped
+  at `mc.sales_max_names_per_run` = 4800 (~10 min); a poll log (`sales_polls`) stops zero-sale items
+  from being re-polled every run — they wait 24 h.
+- 2026-11-09 — GHA collector (T-08) checks out only `sales/` and `sales_polls/` of `cs2-skin-data`:
+  asks+bids are ~0.54 MB per hourly run (~13 MB/day, ~4.7 GB/year), too big to clone every hour.
+- 2026-11-09 — Items (T-12): 27,209 feed names, 0 unknown; 26,681 by ByMykel DB, 528 by name rules
+  (mostly Souvenir Charm highlights). Pins, passes, keys, terminals → `other`; souvenir highlight
+  packages → `capsule`.
 - 2026-11-09 — Task order: the market.csgo collector (T-02…T-10) before the Steam backfill
   and everything else — collector days can't be recovered later.
 - 2026-11-09 — Event/seasonal strategy family has no known dated event source → spike S-09

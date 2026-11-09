@@ -152,3 +152,21 @@ def test_never_fetched_from_latest_asks(tmp_path):
 
 def test_no_data_no_due(tmp_path):
     assert due_at(Store(tmp_path), 0) == []
+
+
+def test_zero_sale_item_waits_for_largest_tier(tmp_path):
+    from datetime import UTC, datetime, timedelta
+
+    from cs2trader.collect import sales_due
+    from cs2trader.config import McSettings
+    from cs2trader.models import AskRow, Snapshot
+    from cs2trader.store import Store
+
+    store = Store(tmp_path)
+    now = datetime.now(UTC)
+    store.write_snapshot(Snapshot("asks", now, now, "mac", [AskRow("Quiet Item", 1.0, 3)]))
+    assert sales_due(store, now, McSettings()) == ["Quiet Item"]
+    store.write_sales({"Quiet Item": []}, "mac")
+    store = Store(tmp_path)
+    assert sales_due(store, now + timedelta(hours=23), McSettings()) == []
+    assert sales_due(store, now + timedelta(hours=25), McSettings()) == ["Quiet Item"]

@@ -8,7 +8,7 @@ import duckdb
 import polars as pl
 
 from cs2trader.errors import FxMissing
-from cs2trader.models import FxRate, Sale, Snapshot, SteamPoint
+from cs2trader.models import FxRate, ItemInfo, Sale, Snapshot, SteamPoint
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS steam_points (
@@ -21,6 +21,9 @@ CREATE TABLE IF NOT EXISTS steam_fetch_log (
 CREATE TABLE IF NOT EXISTS fx_rates (
     day DATE, base VARCHAR, per_usd DOUBLE, source VARCHAR, filled BOOLEAN,
     PRIMARY KEY (day, base));
+CREATE TABLE IF NOT EXISTS items (
+    name VARCHAR PRIMARY KEY, category VARCHAR, source VARCHAR, weapon VARCHAR, rarity VARCHAR,
+    stattrak BOOLEAN, souvenir BOOLEAN, release_date DATE, first_seen DATE);
 """
 
 
@@ -56,6 +59,13 @@ class Store:
             src = (f"SELECT CAST(NULL AS TIMESTAMPTZ) AS fetched_at, CAST(NULL AS VARCHAR) AS host, "
                    f"CAST(NULL AS VARCHAR) AS market_hash_name, {cols} WHERE false")
         self.db.execute(f"CREATE OR REPLACE VIEW sales AS {src}")
+        polls = self.data_dir / "collector" / "sales_polls"
+        if any(polls.glob("day=*/*.parquet")):
+            psrc = f"SELECT * EXCLUDE (day) FROM read_parquet('{polls}/day=*/*.parquet', hive_partitioning = true)"
+        else:
+            psrc = ("SELECT CAST(NULL AS TIMESTAMPTZ) AS polled_at, CAST(NULL AS VARCHAR) AS host, "
+                    "CAST(NULL AS VARCHAR) AS market_hash_name WHERE false")
+        self.db.execute(f"CREATE OR REPLACE VIEW sales_polls AS {psrc}")
 
     def _create_view(self, kind: str) -> None:
         tree = self.data_dir / "collector" / kind
@@ -118,6 +128,13 @@ class Store:
         tmp = path.with_suffix(".tmp")
         df.write_parquet(tmp, compression="zstd")
         tmp.replace(path)
+        # Items with no sales leave no rows above; the poll log keeps them from being re-polled every run.
+        polls = self.data_dir / "collector" / "sales_polls" / path.parent.name / path.name
+        polls.parent.mkdir(parents=True, exist_ok=True)
+        pl.DataFrame({"polled_at": [fetched_at] * len(sales), "host": [host] * len(sales),
+                      "market_hash_name": list(sales)},
+                     schema={"polled_at": pl.Datetime("us", "UTC"), "host": pl.String,
+                             "market_hash_name": pl.String}).write_parquet(polls, compression="zstd")
         self._create_sales_view()
         return path
 
@@ -127,6 +144,20 @@ class Store:
             [(r.day, r.base, r.per_usd, r.source, r.filled) for r in rates],
         )
         return len(rates)
+
+    def upsert_items(self, items: Sequence[ItemInfo]) -> int:
+        today = datetime.now(UTC).date()
+        # first_seen survives re-classification: only the first insert sets it
+        self.db.executemany(
+            """INSERT INTO items VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT (name) DO UPDATE SET
+                 category = excluded.category, source = excluded.source, weapon = excluded.weapon,
+                 rarity = excluded.rarity, stattrak = excluded.stattrak, souvenir = excluded.souvenir,
+                 release_date = excluded.release_date""",
+            [(i.market_hash_name, str(i.category), i.source, i.weapon, i.rarity, i.stattrak, i.souvenir,
+              i.release_date, today) for i in items],
+        )
+        return len(items)
 
     def fx(self, day: date, base: str) -> FxRate:
         row = self.db.execute(
@@ -162,19 +193,20 @@ class Store:
         # Days with hourly points are collapsed to one bar: volume-weighted price, summed volume.
         # duckdb 2.0: .pl() exists on relations (sql), no longer on execute() results
         return self.db.sql("""
-            SELECT name AS market_hash_name, CAST(ts AS DATE) AS t,
-                   COALESCE(SUM(price_usd * volume) / NULLIF(SUM(volume), 0),
-                            AVG(price_usd)) AS price,
-                   CAST(SUM(volume) AS BIGINT) AS volume,
-                   CAST(NULL AS DOUBLE) AS ask, CAST(NULL AS DOUBLE) AS bid
-            FROM steam_points
-            WHERE CAST(ts AS DATE) BETWEEN ? AND ?
+            SELECT p.name AS market_hash_name, CAST(p.ts AS DATE) AS t,
+                   COALESCE(SUM(p.price_usd * p.volume) / NULLIF(SUM(p.volume), 0),
+                            AVG(p.price_usd)) AS price,
+                   CAST(SUM(p.volume) AS BIGINT) AS volume,
+                   CAST(NULL AS DOUBLE) AS ask, CAST(NULL AS DOUBLE) AS bid,
+                   i.category AS category
+            FROM steam_points p LEFT JOIN items i ON i.name = p.name
+            WHERE CAST(p.ts AS DATE) BETWEEN ? AND ?
             GROUP BY ALL ORDER BY t, market_hash_name
         """, params=[start, end]).pl()
 
     def data_version(self) -> str:
         parts = [str(self.db.execute("SELECT CAST(max(fetched_at) AS VARCHAR) FROM steam_fetch_log").fetchone()[0])]
-        for table in ("steam_points", "steam_fetch_log", "fx_rates"):
+        for table in ("steam_points", "steam_fetch_log", "fx_rates", "items"):
             parts.append(str(self.db.execute(f"SELECT count(*) FROM {table}").fetchone()[0]))
         for kind in _VIEW_COLUMNS:
             latest = self.db.execute(f"SELECT CAST(max(feed_time) AS VARCHAR) FROM {kind}").fetchone()[0]

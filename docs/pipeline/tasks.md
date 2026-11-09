@@ -82,7 +82,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: subagent
       Depends on: T-04, T-05
 
-- [ ] T-07 — `cs2 collect run`
+- [x] T-07 — `cs2 collect run`
       Files: src/cs2trader/collect.py, src/cs2trader/cli.py, tests/test_collect.py
       Do: `collect_once` per the contract: kinds independent, a failed kind doesn't stop the
           others; `MarketCsgoKeyError` → sales skipped, exit 3 after asks/bids are saved;
@@ -139,11 +139,11 @@ Until then they are skipped and the next task in order is taken.
       Executor: main loop
       Depends on: T-02, T-04
 
-- [ ] T-12 — Item categories: `cs2 items update`
+- [x] T-12 — Item categories: `cs2 items update`
       Files: src/cs2trader/sources/items_db.py, src/cs2trader/store.py, src/cs2trader/cli.py,
              tests/test_items.py, tests/fixtures/items_db_sample.json
       Do: fetch ByMykel `all.json` (at most daily, cached), `classify` by the DB then by name
-          rules (spike S-04), store `items` with `first_seen`; the raw 78 MB file isn't kept
+          rules (spike S-04), store `items` with `first_seen`; the raw 78 MB file is cached in data/cache/
           `daily_bars` gains a `category` column from `items` (the engine looks up
           `FillModel.ratio` by it, T-18; without it every item gets `ratio_fallback`)
       DoD: `uv run pytest tests/test_items.py` green on the fixed 20-name list from AC-4;

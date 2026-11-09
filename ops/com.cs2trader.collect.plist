@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.cs2trader.collect</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/uv</string>
+        <string>run</string>
+        <string>cs2</string>
+        <string>collect</string>
+        <string>run</string>
+        <string>--kinds</string>
+        <string>asks,bids</string>
+        <string>--host</string>
+        <string>mac</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/daniilmurai/PycharmProjects/cs2-skin-trader</string>
+    <!-- StartCalendarInterval, unlike StartInterval, fires a missed run once after wake. -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Minute</key>
+        <integer>47</integer>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>/Users/daniilmurai/PycharmProjects/cs2-skin-trader/data/logs/collect-mac.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/daniilmurai/PycharmProjects/cs2-skin-trader/data/logs/collect-mac.log</string>
+</dict>
+</plist>
