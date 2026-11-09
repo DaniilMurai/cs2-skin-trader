@@ -8,7 +8,7 @@ Author's standing instruction (2026-11-09): work through tasks autonomously, com
 task or batch without asking; stop only for questions that need the author.
 Gates: passed up to and including stage 6 (author's go to stage 7, 2026-11-09)
 
-Next action: T-24…T-26 (trend, momentum, mean reversion), T-29 (walk-forward), T-30 (verdict), T-31 (report); T-14 backfill running in data/backfill/ (~28 h at ~3.7 s/item: Steam response time, not our limit). Author: GitHub setup for T-08, launchd install for T-09. Done 2026-11-09: T-01…T-07, T-11…T-13, T-15, T-18…T-21, T-28; code-only (real-data check pending): T-10, T-16, T-22, T-23.
+Next action: register T-24 trend when its subagent returns; T-31 report; T-27 event spike. T-14 backfill running in data/backfill/. Author: GitHub setup for T-08, launchd install for T-09. Done 2026-11-09: T-01…T-07, T-11…T-13, T-15, T-18…T-21, T-25, T-26, T-28…T-30; code-only (real-data check pending): T-10, T-16, T-22, T-23.
 
 ## Stage history
 - 0 context load — 2026-11-09 (new project: README only, no git, Python 3.14.7, uv)
@@ -109,6 +109,12 @@ Next action: T-24…T-26 (trend, momentum, mean reversion), T-29 (walk-forward),
   for 10 decision days (volume cap cancels the rest), never sells; price estimate × (1 + spread + 2%).
 - 2026-11-09 — Metrics (T-28): per-regime return chains the labelled days' daily returns; drawdown on
   that chained path; Sharpe × √365 on daily simple returns (ddof 1).
+- 2026-11-09 — Walk-forward (T-29): 24 folds (365-day train, 91-day test, last fold 7 days); tuned by
+  train-window cash Sharpe, ties → earlier grid point; holdout params tuned once more on the 365 days
+  before 2025-10-01; all tuning runs share one prepared market (one load, cached universes).
+- 2026-11-09 — Verdict (T-30): deflated Sharpe = annualised walk-forward test Sharpe − SR0 (Bailey &
+  López de Prado 2014) from the variance of all tuning-run Sharpes and n_variants; holds if > 0.
+  The stressed holdout run is compared with the benchmarks' normal runs (stricter reading).
 - 2026-11-09 — Task order: the market.csgo collector (T-02…T-10) before the Steam backfill
   and everything else — collector days can't be recovered later.
 - 2026-11-09 — Event/seasonal strategy family has no known dated event source → spike S-09

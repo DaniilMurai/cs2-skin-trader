@@ -297,7 +297,8 @@ REGISTRY: Mapping[str, StrategyEntry]
 # required entries: v1_dip_knives, v2_category_momentum, cash, bh_universe, bh_knives_gloves
 
 # cs2trader/backtest/engine.py
-def run(spec: RunSpec, store: Store) -> RunResult: ...
+def run(spec: RunSpec, store: Store, settings: Settings | None = None,
+        data: MarketData | None = None) -> RunResult: ...  # data: a shared prepared market (walk-forward)
 def apply_fills(orders: Sequence[Order], bar: pl.DataFrame, book: "Book",
                 cost: CostModel, fills: FillModel) -> list[Fill]: ...  # pure; AC-7, AC-8 unit tests
 
@@ -313,7 +314,9 @@ def verdict(strategy: str, capital: float, wf: WalkForwardResult, ho: RunResult,
 class WalkForwardResult:
     folds: tuple[tuple[date, date, Mapping[str, Any], Metrics], ...]  # test start, end, chosen params, metrics
     chosen_params: Mapping[str, Any]          # params used on the holdout
-    n_variants: int                           # grid size × folds, for the Sharpe deflation
+    n_variants: int                           # grid size × (folds + 1), for the Sharpe deflation
+    trial_sharpes: tuple[float, ...] = ()     # daily cash Sharpe of every tuning run (variance for SR0)
+    test_returns: tuple[float, ...] = ()      # daily cash returns of the test windows, in order
 
 # cs2trader/forward.py
 def forward(entry: StrategyEntry, params: Mapping[str, Any], capital: float, store: Store,

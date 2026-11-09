@@ -284,7 +284,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: subagent
       Depends on: T-21
 
-- [ ] T-25 — Cross-sectional momentum
+- [x] T-25 — Cross-sectional momentum
       Files: src/cs2trader/strategies/momentum.py, src/cs2trader/strategies/registry.py,
              tests/test_xs_momentum.py
       Do: every `rebalance_days`, hold the top-k items by `lookback`-day return within the
@@ -294,7 +294,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: subagent
       Depends on: T-21
 
-- [ ] T-26 — Mean reversion after overshoots
+- [x] T-26 — Mean reversion after overshoots
       Files: src/cs2trader/strategies/mean_reversion.py, src/cs2trader/strategies/registry.py,
              tests/test_mean_reversion.py
       Do: buy an item when its price is ≥ z standard deviations below its `lookback`-day mean,
@@ -326,7 +326,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: subagent
       Depends on: T-20
 
-- [ ] T-29 — Walk-forward, holdout, stress runs
+- [x] T-29 — Walk-forward, holdout, stress runs
       Files: src/cs2trader/evaluate.py, src/cs2trader/store.py, tests/test_walk_forward.py
       Do: rolling folds per `wf.*` settings, grid search on the train window by cash Sharpe,
           `variants_tried` recorded, holdout run with chosen params, stress run (fees × 1.5,
@@ -337,7 +337,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: main loop
       Depends on: T-28
 
-- [ ] T-30 — Verdict and deflated Sharpe
+- [x] T-30 — Verdict and deflated Sharpe
       Files: src/cs2trader/evaluate.py, tests/test_verdict.py
       Do: AC-12 rules in their order; deflated Sharpe ratio (Bailey & López de Prado) over
           `n_variants`; first broken rule recorded

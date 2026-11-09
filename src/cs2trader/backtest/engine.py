@@ -145,14 +145,23 @@ FILL_SCHEMA = {"t": pl.Date, "market_hash_name": pl.String, "side": pl.String, "
 WARMUP_DAYS = 400
 
 
-def run(spec: RunSpec, store: Store, settings: Settings | None = None) -> RunResult:
+def load_market(store: Store, start: date, end: date, settings: Settings) -> MarketData:
+    bars = store.daily_bars(start - timedelta(days=WARMUP_DAYS), end)
+    return MarketData(bars, store.items_frame(), settings.universe, settings.regimes)
+
+
+def run(spec: RunSpec, store: Store, settings: Settings | None = None,
+        data: MarketData | None = None) -> RunResult:
+    """`data` lets many runs share one prepared market (walk-forward); it must cover
+    `spec.start − WARMUP_DAYS … spec.end`. Views never read past the decision bar, so a wider
+    `data` changes nothing but the first weeks of regime labels, which then have more history."""
     from cs2trader.strategies.registry import REGISTRY
 
     settings = settings or load_settings()
     strategy = REGISTRY[spec.strategy].factory(spec.params)
-    bars = store.daily_bars(spec.start - timedelta(days=WARMUP_DAYS), spec.end)
-    data = MarketData(bars, store.items_frame(), settings.universe, settings.regimes)
-    days = [d for d in data.days if d >= spec.start]
+    if data is None:
+        data = load_market(store, spec.start, spec.end, settings)
+    days = [d for d in data.days if spec.start <= d <= spec.end]
     book = Book(spec.capital)
     last: dict[str, Mapping[str, Any]] = {}
     trades: list[Fill] = []

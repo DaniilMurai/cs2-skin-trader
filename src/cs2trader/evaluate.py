@@ -1,10 +1,20 @@
+import json
 import math
-from collections.abc import Sequence
-from itertools import accumulate, pairwise
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, replace
+from datetime import date, timedelta
+from itertools import accumulate, pairwise, product
+from statistics import NormalDist
+from typing import Any
 
 import polars as pl
 
-from cs2trader.models import Metrics, Regime, RunResult
+from cs2trader.backtest.engine import load_market, run
+from cs2trader.backtest.view import MarketData
+from cs2trader.config import Settings, WfSettings, load_settings
+from cs2trader.models import FillModel, Metrics, Regime, RunResult, RunSpec, Verdict
+from cs2trader.store import Store
+from cs2trader.strategies.registry import StrategyEntry
 
 ANNUALISATION = math.sqrt(365)
 
@@ -101,3 +111,128 @@ def metrics(result: RunResult,
                                        list(accumulate(rs, lambda a, r: a * (1 + r), initial=1.0)),
                                        rc, rs, None, n, fees)
     return out
+
+
+@dataclass(frozen=True)
+class WalkForwardResult:
+    folds: tuple[tuple[date, date, Mapping[str, Any], Metrics], ...]
+    chosen_params: Mapping[str, Any]
+    n_variants: int
+    trial_sharpes: tuple[float, ...] = ()   # daily (not annualised) cash Sharpe of every tuning run
+    test_returns: tuple[float, ...] = ()    # daily cash returns of the test windows, chained in order
+
+
+def grid_variants(grid: Mapping[str, Sequence[Any]]) -> list[dict[str, Any]]:
+    keys = sorted(grid)
+    return [dict(zip(keys, combo)) for combo in product(*(grid[k] for k in keys))] or [{}]
+
+
+def make_spec(strategy: str, params: Mapping[str, Any], capital: float, start: date, end: date,
+              settings: Settings, stress: bool = False) -> RunSpec:
+    c, f = settings.costs, settings.fills
+    cost_k = settings.verdict.cost_stress if stress else 1.0
+    spread_k = settings.verdict.spread_stress if stress else 1.0
+    costs = replace(c, seller_fee=c.seller_fee * cost_k, buyer_fee=c.buyer_fee * cost_k,
+                    withdraw_fee_cash=c.withdraw_fee_cash * cost_k,
+                    withdraw_fee_steam=c.withdraw_fee_steam * cost_k)
+    fills = FillModel(participation_cap=f.participation_cap, spread_penalty=f.spread_penalty * spread_k,
+                      ratio_fallback=f.ratio_fallback)
+    return RunSpec(strategy, dict(params), capital, start, end, costs=(costs,), fills=fills)
+
+
+def folds(s: WfSettings) -> list[tuple[date, date, date, date]]:
+    """(train_start, train_end, test_start, test_end); test windows tile wf.start + train_days …
+    wf.end, the last one cut at wf.end."""
+    out = []
+    test_start = s.start + timedelta(days=s.train_days)
+    while test_start <= s.end:
+        test_end = min(test_start + timedelta(days=s.test_days - 1), s.end)
+        out.append((test_start - timedelta(days=s.train_days), test_start - timedelta(days=1),
+                    test_start, test_end))
+        test_start = test_end + timedelta(days=1)
+    return out
+
+
+def _choose(entry: StrategyEntry, capital: float, start: date, end: date, store: Store,
+            settings: Settings, data: MarketData, fold: int, log: list,
+            sharpes: list[float]) -> dict[str, Any]:
+    best, best_sharpe = None, -math.inf
+    for params in grid_variants(entry.grid):
+        res = run(make_spec(entry.name, params, capital, start, end, settings), store, settings, data)
+        log.append((entry.name, json.dumps(params, sort_keys=True), fold, capital, res.run_id))
+        sharpe = metrics(res).sharpe_cash
+        sharpes.append(sharpe / ANNUALISATION)
+        # Strictly greater: ties keep the earlier grid point, so the choice is deterministic.
+        if sharpe > best_sharpe:
+            best, best_sharpe = params, sharpe
+    return best
+
+
+def walk_forward(entry: StrategyEntry, capital: float, store: Store, s: WfSettings,
+                 settings: Settings | None = None, data: MarketData | None = None) -> WalkForwardResult:
+    """Tune on each train window by cash Sharpe, test the winner on the next window, then tune
+    once more on the `train_days` before the holdout for the params the holdout uses. Nothing
+    on or after `s.holdout_start` is loaded."""
+    settings = settings or load_settings()
+    last_tuned = s.holdout_start - timedelta(days=1)
+    data = data or load_market(store, s.start, min(s.end, last_tuned), settings)
+    log: list = []
+    sharpes: list[float] = []
+    test_returns: list[float] = []
+    out = []
+    for i, (tr0, tr1, te0, te1) in enumerate(folds(s)):
+        params = _choose(entry, capital, tr0, tr1, store, settings, data, i, log, sharpes)
+        res = run(make_spec(entry.name, params, capital, te0, te1, settings), store, settings, data)
+        test_returns += _returns(res.equity["equity_cash"].to_list())
+        out.append((te0, te1, params, metrics(res)))
+    final_start = s.holdout_start - timedelta(days=s.train_days)
+    chosen = _choose(entry, capital, final_start, last_tuned, store, settings, data, len(out), log, sharpes)
+    store.record_variants(log)
+    return WalkForwardResult(tuple(out), chosen, len(log), tuple(sharpes), tuple(test_returns))
+
+
+def holdout(entry: StrategyEntry, params: Mapping[str, Any], capital: float, store: Store,
+            s: WfSettings, stress: bool = False, settings: Settings | None = None,
+            end: date | None = None) -> RunResult:
+    settings = settings or load_settings()
+    end = end or store.last_day()
+    spec = make_spec(entry.name, params, capital, s.holdout_start, end, settings, stress)
+    return run(spec, store, settings)
+
+
+EULER_GAMMA = 0.5772156649015329
+
+
+def deflated_sharpe(returns: Sequence[float], trial_sharpes: Sequence[float], n_trials: int) -> float:
+    """Annualised Sharpe minus the expected maximum Sharpe of `n_trials` unskilled variants
+    (Bailey & López de Prado 2014, "The Deflated Sharpe Ratio", eq. for SR0), using the
+    variance of the trial Sharpes. > 0 means the observed Sharpe beats what picking the best of
+    that many random variants would give. With one trial nothing is deflated."""
+    if len(returns) < 2:
+        return 0.0
+    sr = _sharpe(returns) / ANNUALISATION
+    if n_trials <= 1 or len(trial_sharpes) < 2:
+        return sr * ANNUALISATION
+    mean = sum(trial_sharpes) / len(trial_sharpes)
+    var = sum((x - mean) ** 2 for x in trial_sharpes) / (len(trial_sharpes) - 1)
+    z = NormalDist().inv_cdf
+    sr0 = math.sqrt(var) * ((1 - EULER_GAMMA) * z(1 - 1 / n_trials)
+                            + EULER_GAMMA * z(1 - 1 / (n_trials * math.e)))
+    return (sr - sr0) * ANNUALISATION
+
+
+def verdict(strategy: str, capital: float, wf: WalkForwardResult, ho: RunResult,
+            ho_stress: RunResult, bh: RunResult, cash: RunResult) -> Verdict:
+    """AC-12, rules checked in this order; the first broken one is reported. The stressed run is
+    compared with the benchmarks' normal runs — the stricter reading of "stays above both"."""
+    m, ms, mb, mc = metrics(ho), metrics(ho_stress), metrics(bh), metrics(cash)
+    dsr = deflated_sharpe(wf.test_returns, wf.trial_sharpes, wf.n_variants)
+    rules = (
+        ("beats_cash", m.net_return_cash > mc.net_return_cash),
+        ("beats_bh", m.net_return_cash > mb.net_return_cash),
+        ("drawdown", m.max_drawdown_cash <= mb.max_drawdown_cash),
+        ("cost_stress", ms.net_return_cash > mc.net_return_cash and ms.net_return_cash > mb.net_return_cash),
+        ("deflated_sharpe", dsr > 0),
+    )
+    broken = next((name for name, ok in rules if not ok), None)
+    return Verdict(strategy, capital, "fails" if broken else "holds_up", broken, m, dsr, wf.n_variants)

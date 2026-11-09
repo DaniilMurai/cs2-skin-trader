@@ -186,3 +186,14 @@ class Metrics:
     sharpe_cash: float
     n_trades: int
     fees_paid: float
+
+
+@dataclass(frozen=True)
+class Verdict:
+    strategy: str
+    capital: float
+    status: Literal["holds_up", "fails"]
+    first_broken_rule: Literal["beats_cash", "beats_bh", "drawdown", "cost_stress", "deflated_sharpe"] | None
+    holdout: Metrics
+    deflated_sharpe: float
+    n_variants: int

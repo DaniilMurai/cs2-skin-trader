@@ -24,6 +24,9 @@ CREATE TABLE IF NOT EXISTS fx_rates (
 CREATE TABLE IF NOT EXISTS items (
     name VARCHAR PRIMARY KEY, category VARCHAR, source VARCHAR, weapon VARCHAR, rarity VARCHAR,
     stattrak BOOLEAN, souvenir BOOLEAN, release_date DATE, first_seen DATE);
+CREATE TABLE IF NOT EXISTS variants_tried (
+    strategy VARCHAR, params_json VARCHAR, fold INTEGER, capital DOUBLE, run_id VARCHAR,
+    PRIMARY KEY (strategy, params_json, fold, capital));
 CREATE TABLE IF NOT EXISTS regimes (
     t DATE PRIMARY KEY, index_level DOUBLE, ret DOUBLE, regime VARCHAR);
 """
@@ -165,6 +168,12 @@ class Store:
         self.db.execute("DELETE FROM regimes")
         self.db.execute("INSERT INTO regimes SELECT t, index_level, ret, regime FROM labels")
         return labels.height
+
+    def record_variants(self, rows: Sequence[tuple[str, str, int, float, str]]) -> None:
+        self.db.executemany("INSERT OR REPLACE INTO variants_tried VALUES (?, ?, ?, ?, ?)", rows)
+
+    def last_day(self) -> date | None:
+        return self.db.execute("SELECT max(CAST(ts AS DATE)) FROM steam_points").fetchall()[0][0]
 
     def items_frame(self) -> pl.DataFrame:
         return self.db.sql("SELECT name, category FROM items").pl()
