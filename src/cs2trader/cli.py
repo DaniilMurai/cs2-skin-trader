@@ -1,5 +1,6 @@
 import argparse
 import json
+import re
 import sys
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
@@ -128,6 +129,17 @@ def cmd_regimes(args: argparse.Namespace) -> None:
         print(f"  {row['start']} → {row['end']}  {row['regime']}")
 
 
+def cmd_report(args: argparse.Namespace) -> None:
+    from cs2trader.report import build_report
+
+    settings = load_settings()
+    names = [n.strip() for n in args.strategies.split(",") if n.strip()] if args.strategies else None
+    path = build_report(Store(settings.data_dir), settings.reports_dir, settings, names)
+    first = path.read_text().split("\n", 1)[0]
+    digest = re.search(r"Results hash: <code>(\w+)</code>", path.read_text()).group(1)
+    print(f"report: {path}\nresults hash: {digest}\n{re.search('<h1>(.*?)</h1>', first).group(1)}")
+
+
 def cmd_data_check(args: argparse.Namespace) -> None:
     settings = load_settings()
     store = Store(settings.data_dir)
@@ -210,6 +222,10 @@ def main() -> None:
     bt.add_argument("--to", dest="date_to", required=True)
     bt.add_argument("--params", default="{}")
     bt.set_defaults(func=cmd_backtest)
+
+    rp = sub.add_parser("report")
+    rp.add_argument("--strategies", help="comma-separated subset; cash and bh_universe are always included")
+    rp.set_defaults(func=cmd_report)
 
     sub.add_parser("strategies").set_defaults(func=cmd_strategies)
 

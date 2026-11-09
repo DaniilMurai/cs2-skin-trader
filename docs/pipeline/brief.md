@@ -130,20 +130,32 @@ that kind of bot survives real costs.
   video's results are not evidence → our walk-forward test.
 
 ## How to run
-Commands that ran on 2026-11-09 (stage 5 slice), from the repo root:
+Commands that ran on 2026-11-09, from the repo root (`cs2` reads `cs2.toml` and `.env` from the
+current directory):
 
 ```bash
 uv sync                                   # Python 3.14 venv + pinned deps (uv.lock)
-uv run pytest -q                          # tests/ only (spikes are excluded)
-uv run cs2 fx update                      # NBU UAH→USD, last 30 days → data/cs2.duckdb
-uv run cs2 backfill steam --names tests/fixtures/slice_names.txt   # needs STEAM_LOGIN_SECURE in .env
-uv run cs2 backtest --strategy bh_universe --capital 1000 --from 2024-01-01 --to 2025-09-30
+uv run pytest -q                          # tests/ only (spikes are excluded), ~70 s
+uv run cs2 fx update                      # NBU UAH + CBR RUB rates 2013→today (re-run: last 8 days)
+uv run cs2 collect run --kinds asks,bids,sales --host mac    # one collector run (sales needs MARKETCSGO_API_KEY)
+uv run cs2 collect status                 # snapshots and gaps in the last 48 h
+uv run cs2 items update                   # categories for every feed name (ByMykel DB, cached daily)
+uv run cs2 backfill steam [--names FILE] [--limit N]   # needs STEAM_LOGIN_SECURE; resumable
+uv run cs2 data check --categories        # AC-1/AC-4 checks, exit 6 on failure
+uv run cs2 regimes                        # market index regime labels → regimes table
+uv run cs2 strategies                     # registry: name, family, grid
+uv run cs2 backtest --strategy bh_universe --capital 1000 --from 2024-01-01 --to 2025-09-30 [--params JSON]
+uv run cs2 report --strategies mean_reversion   # walk-forward + holdout + verdicts → reports/<date>/report.html
 ```
 
 - Secrets: `.env` at the repo root (`STEAM_LOGIN_SECURE`, `MARKETCSGO_API_KEY`), names in `.env.example`.
-- Output: `data/cs2.duckdb`; each backtest writes `data/runs/<run_id>/{trades,equity}.parquet, spec.json`.
-- Re-running `backfill steam` skips names already fetched with status `ok` (`--refresh` re-fetches).
-- Not yet wired: `collect`, `items`, `data check`, `regimes`, `ratio`, `report`, `forward`.
+- Output: `data/cs2.duckdb`, `data/collector/` (Parquet), `data/runs/<run_id>/`, `reports/<date>/`.
+- DuckDB allows one writer: a long command (backfill, report) locks `data/cs2.duckdb`. The full Steam
+  backfill therefore runs in `data/backfill/` with its own `cs2.toml` and is merged afterwards
+  (`cs2trader.backfill.merge_from`).
+- Collector scheduling: `.github/workflows/collect.yml` (needs repo setup) and `ops/` (launchd), see
+  `ops/README.md`. `cs2 collect pull` fetches the GitHub collector's files.
+- Not yet wired: `ratio` (needs ≥ 14 days of snapshots), `forward` (≥ 28 days).
 
 ## Glossary
 - **market_hash_name** — Steam's unique name of a tradeable item type, e.g.

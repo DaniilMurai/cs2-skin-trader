@@ -8,7 +8,7 @@ Author's standing instruction (2026-11-09): work through tasks autonomously, com
 task or batch without asking; stop only for questions that need the author.
 Gates: passed up to and including stage 6 (author's go to stage 7, 2026-11-09)
 
-Next action: T-31 report; T-27 event spike. T-14 backfill running in data/backfill/. Author: GitHub setup for T-08, launchd install for T-09. Done 2026-11-09: T-01…T-07, T-11…T-13, T-15, T-18…T-21, T-24…T-26, T-28…T-30; code-only (real-data check pending): T-10, T-16, T-22, T-23.
+Next action: wait for T-14 (Steam backfill in data/backfill/, ~28 h from 2026-11-09 15:49 UTC), then merge it into data/ (`merge_from`), run `cs2 items update`, `cs2 data check --categories`, `cs2 regimes` (T-16 real check), T-27a first-point check, V1/V2 2019–2025 runs, T-33 full report. Author: GitHub setup for T-08, launchd install for T-09. Done 2026-11-09: T-01…T-07, T-11…T-13, T-15, T-18…T-21, T-24…T-26, T-27, T-27b, T-28…T-31; code-only (real-data check pending): T-10, T-16, T-22, T-23, T-27a.
 
 ## Stage history
 - 0 context load — 2026-11-09 (new project: README only, no git, Python 3.14.7, uv)
@@ -120,6 +120,9 @@ Next action: T-31 report; T-27 event spike. T-14 backfill running in data/backfi
   operations and seasonal sales are too few. ByMykel case `first_sale_date` is not a release date
   (only 7/45 within 3 days) → the T-13 first-date check skips cases. Case dates come from a
   hand-kept third-party table (dates only, not its text); Majors from Wikipedia (CC BY-SA).
+- 2026-11-09 — Report (T-31): rows strategy × capital × period (walk_forward = fold test runs chained,
+  holdout, holdout_stress, per-fold rows) × regime × unit; cash and bh_universe always evaluated;
+  hash over the results table only. POLARS_MAX_THREADS defaults to 1 (2m50s → 83 s, same hash).
 - 2026-11-09 — Task order: the market.csgo collector (T-02…T-10) before the Steam backfill
   and everything else — collector days can't be recovered later.
 - 2026-11-09 — Event/seasonal strategy family has no known dated event source → spike S-09

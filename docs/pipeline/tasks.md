@@ -363,7 +363,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: main loop
       Depends on: T-29
 
-- [ ] T-31 — `cs2 report` HTML + results hash
+- [x] T-31 — `cs2 report` HTML + results hash *(hash reproducible on `--strategies mean_reversion`; a full run on all strategies → T-33)*
       Files: src/cs2trader/report.py, src/cs2trader/cli.py, tests/test_report.py
       Do: `reports/<date>/report.html`: verdict line first, table per strategy × regime ×
           capital × unit for walk-forward and holdout, sensitivity to costs and spread,
@@ -372,6 +372,28 @@ Until then they are skipped and the next task in order is taken.
            data → identical results hash (AC-13); the HTML has every column of AC-11
       Executor: subagent
       Depends on: T-30, T-22, T-23, T-24, T-25, T-26
+
+## F2. Follow-ups found during implementation
+
+- [ ] T-33 — Full report run time
+      Files: src/cs2trader/evaluate.py, src/cs2trader/report.py
+      Do: a full `cs2 report` runs every grid point in 25 tuning windows × 2 capitals (V1 alone:
+          72 × 25 × 2 = 3,600 runs); with the real ~27k-item data it will take hours. Measure on
+          the merged backfill, then cut it: run strategies/capitals in parallel processes (each
+          builds its own MarketData), and add progress output
+      DoD: a full `cs2 report` on the merged data finishes in < 2 h on this Mac; two runs give the
+           same results hash
+      Executor: main loop
+      Depends on: T-14, T-31
+
+- [ ] T-34 — Measured Steam→market.csgo ratio in backtests
+      Files: src/cs2trader/evaluate.py, src/cs2trader/market/ratio.py
+      Do: when `fills.ratio_source = "measured"`, `make_spec` fills `FillModel.ratio` per category
+          from `steam_to_market_ratio` (T-17); today only `ratio_fallback` is passed
+      DoD: a test with a stored ratio table gives per-category fill prices; the report's
+           assumptions block names the source
+      Executor: subagent
+      Depends on: T-17
 
 ## G. Forward paper test (Plan step 6, AC-14)
 

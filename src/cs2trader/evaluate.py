@@ -193,11 +193,11 @@ def walk_forward(entry: StrategyEntry, capital: float, store: Store, s: WfSettin
 
 def holdout(entry: StrategyEntry, params: Mapping[str, Any], capital: float, store: Store,
             s: WfSettings, stress: bool = False, settings: Settings | None = None,
-            end: date | None = None) -> RunResult:
+            end: date | None = None, data: MarketData | None = None) -> RunResult:
     settings = settings or load_settings()
     end = end or store.last_day()
     spec = make_spec(entry.name, params, capital, s.holdout_start, end, settings, stress)
-    return run(spec, store, settings)
+    return run(spec, store, settings, data)
 
 
 EULER_GAMMA = 0.5772156649015329
