@@ -24,6 +24,8 @@ CREATE TABLE IF NOT EXISTS fx_rates (
 CREATE TABLE IF NOT EXISTS items (
     name VARCHAR PRIMARY KEY, category VARCHAR, source VARCHAR, weapon VARCHAR, rarity VARCHAR,
     stattrak BOOLEAN, souvenir BOOLEAN, release_date DATE, first_seen DATE);
+CREATE TABLE IF NOT EXISTS regimes (
+    t DATE PRIMARY KEY, index_level DOUBLE, ret DOUBLE, regime VARCHAR);
 """
 
 
@@ -158,6 +160,14 @@ class Store:
               i.release_date, today) for i in items],
         )
         return len(items)
+
+    def write_regimes(self, labels: pl.DataFrame) -> int:
+        self.db.execute("DELETE FROM regimes")
+        self.db.execute("INSERT INTO regimes SELECT t, index_level, ret, regime FROM labels")
+        return labels.height
+
+    def items_frame(self) -> pl.DataFrame:
+        return self.db.sql("SELECT name, category FROM items").pl()
 
     def fx(self, day: date, base: str) -> FxRate:
         row = self.db.execute(

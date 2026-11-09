@@ -4,12 +4,23 @@ import sys
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
+import polars as pl
+
 from cs2trader.backfill import backfill, feed_universe, read_names, request_logger
 from cs2trader.backtest.engine import run
-from cs2trader.collect import pull_remote, run_collect, worst_error
+from cs2trader.check import format_results, raise_if_failed, run_checks
+from cs2trader.collect import (
+    collect_status,
+    format_status,
+    pull_remote,
+    run_collect,
+    worst_error,
+)
 from cs2trader.config import load_settings, require_secret
 from cs2trader.errors import ConfigError, Cs2Error, SteamAuthError
 from cs2trader.items import update_items
+from cs2trader.market.index import market_index
+from cs2trader.market.regimes import label_regimes
 from cs2trader.models import RunSpec
 from cs2trader.sources import fx, steam
 from cs2trader.store import Store
@@ -79,6 +90,38 @@ def cmd_items_update(args: argparse.Namespace) -> None:
         print(f"  unknown: {name}")
 
 
+def cmd_regimes(args: argparse.Namespace) -> None:
+    settings = load_settings()
+    store = Store(settings.data_dir)
+    bars = store.daily_bars(date(2013, 1, 1), datetime.now(UTC).date())
+    labels = label_regimes(market_index(bars, store.items_frame(), "all", settings.universe), settings.regimes)
+    store.write_regimes(labels)
+    if labels.is_empty():
+        print("regimes: no index days (too few items with history)")
+        return
+    runs = labels.with_columns((pl.col("regime") != pl.col("regime").shift(1)).cum_sum().alias("run")).group_by(
+        "run", maintain_order=True).agg(pl.col("t").first().alias("start"), pl.col("t").last().alias("end"),
+                                        pl.col("regime").first())
+    print(f"regimes: {labels.height} days {labels['t'].min()}..{labels['t'].max()}, "
+          + ", ".join(f"{r} {n}" for r, n in labels.group_by("regime").len().sort("regime").iter_rows()))
+    for row in runs.tail(args.last).iter_rows(named=True):
+        print(f"  {row['start']} → {row['end']}  {row['regime']}")
+
+
+def cmd_data_check(args: argparse.Namespace) -> None:
+    settings = load_settings()
+    store = Store(settings.data_dir)
+    universe = settings.backfill.universe
+    names = feed_universe(store) if universe == "feed" else read_names(Path(universe))
+    results = run_checks(store, names, settings.data_dir / "logs" / "steam_requests.tsv", args.categories)
+    print(format_results(results))
+    raise_if_failed(results)
+
+
+def cmd_collect_status(args: argparse.Namespace) -> None:
+    print(format_status(collect_status(Store(load_settings().data_dir), args.hours)))
+
+
 def cmd_collect_pull(args: argparse.Namespace) -> None:
     settings = load_settings()
     print(f"pull: {pull_remote(Store(settings.data_dir), settings.mc.data_repo)} files added")
@@ -120,6 +163,15 @@ def main() -> None:
     it = sub.add_parser("items").add_subparsers(required=True)
     it.add_parser("update").set_defaults(func=cmd_items_update)
 
+    dc = sub.add_parser("data").add_subparsers(required=True)
+    chk = dc.add_parser("check")
+    chk.add_argument("--categories", action="store_true")
+    chk.set_defaults(func=cmd_data_check)
+
+    rg = sub.add_parser("regimes")
+    rg.add_argument("--last", type=int, default=15, help="print the last N regime runs")
+    rg.set_defaults(func=cmd_regimes)
+
     co = sub.add_parser("collect").add_subparsers(required=True)
     cr = co.add_parser("run")
     cr.add_argument("--kinds", default="asks,bids,sales")
@@ -127,6 +179,9 @@ def main() -> None:
     cr.add_argument("--sales-max", type=int, help="override mc.sales_max_names_per_run")
     cr.set_defaults(func=cmd_collect_run)
     co.add_parser("pull").set_defaults(func=cmd_collect_pull)
+    cs = co.add_parser("status")
+    cs.add_argument("--hours", type=int, default=48)
+    cs.set_defaults(func=cmd_collect_status)
 
     bt = sub.add_parser("backtest")
     bt.add_argument("--strategy", required=True)

@@ -8,8 +8,19 @@ from typing import Any
 
 import polars as pl
 
-from cs2trader.errors import InvariantViolation, LookAheadError
-from cs2trader.models import CostModel, EquityPoint, Fill, FillModel, Lot, Order, RunResult, RunSpec
+from cs2trader.backtest.view import BarMarket, MarketData
+from cs2trader.config import Settings, load_settings
+from cs2trader.errors import InvariantViolation
+from cs2trader.models import (
+    CostModel,
+    EquityPoint,
+    Fill,
+    FillModel,
+    Lot,
+    Order,
+    RunResult,
+    RunSpec,
+)
 from cs2trader.store import Store
 
 
@@ -23,25 +34,7 @@ class Book:
         return sum(l.qty for l in self.lots if l.market_hash_name == name and l.unlocks <= on)
 
 
-class _Market:
-    def __init__(self, bars: pl.DataFrame, now: date) -> None:
-        self._bars = bars
-        self.now = now
-
-    def history(self, lookback: int) -> pl.DataFrame:
-        lo = self.now - timedelta(days=lookback)
-        return self._bars.filter((pl.col("t") > lo) & (pl.col("t") <= self.now))
-
-    def universe(self) -> list[str]:
-        return self._bars.filter(pl.col("t") == self.now)["market_hash_name"].to_list()
-
-    def at(self, t: date) -> pl.DataFrame:
-        if t > self.now:
-            raise LookAheadError(f"asked for {t} at {self.now}")
-        return self._bars.filter(pl.col("t") == t)
-
-
-class _Portfolio:
+class BookView:
     def __init__(self, book: Book, next_t: date) -> None:
         self._book = book
         self._next_t = next_t
@@ -74,8 +67,12 @@ def _cap(volume: int, share: float) -> int:
 
 def apply_fills(orders: Sequence[Order], bar: pl.DataFrame, book: Book,
                 cost: CostModel, fills: FillModel) -> list[Fill]:
+    if not orders:
+        return []
     t = bar["t"][0]
-    rows = {r["market_hash_name"]: r for r in bar.iter_rows(named=True)}
+    wanted = {o.market_hash_name for o in orders}
+    rows = {r["market_hash_name"]: r
+            for r in bar.filter(pl.col("market_hash_name").is_in(wanted)).iter_rows(named=True)}
     out: list[Fill] = []
     for o in sorted(orders, key=lambda o: o.side != "sell"):
         if o.qty <= 0:
@@ -141,12 +138,18 @@ def _equity(t: date, book: Book, last: dict[str, Mapping[str, Any]], cost: CostM
                        gross * (1 - cost.withdraw_fee_steam), book.fees_paid)
 
 
-def run(spec: RunSpec, store: Store) -> RunResult:
+# Bars loaded before `spec.start` so lookbacks, the universe and regimes work from day one.
+WARMUP_DAYS = 400
+
+
+def run(spec: RunSpec, store: Store, settings: Settings | None = None) -> RunResult:
     from cs2trader.strategies.registry import REGISTRY
 
+    settings = settings or load_settings()
     strategy = REGISTRY[spec.strategy].factory(spec.params)
-    bars = store.daily_bars(spec.start, spec.end)
-    days = sorted(set(bars["t"].to_list()))
+    bars = store.daily_bars(spec.start - timedelta(days=WARMUP_DAYS), spec.end)
+    data = MarketData(bars, store.items_frame(), settings.universe, settings.regimes)
+    days = [d for d in data.days if d >= spec.start]
     book = Book(spec.capital)
     last: dict[str, Mapping[str, Any]] = {}
     trades: list[Fill] = []
@@ -154,18 +157,26 @@ def run(spec: RunSpec, store: Store) -> RunResult:
     pending: list[Order] = []
     last_sale: date | None = None
     for i, t in enumerate(days):
-        today = bars.filter(pl.col("t") == t)
+        today = data.by_day[t]
         cost = cost_at(spec.costs, t)
         trades += (done := apply_fills(pending, today, book, cost, spec.fills))
         if sold := [f.t for f in done if f.side == "sell" and f.qty_filled]:
             last_sale = max(sold)
-        last.update((r["market_hash_name"], r) for r in today.iter_rows(named=True))
+        held = {l.market_hash_name for l in book.lots}
+        if held:
+            last.update((r["market_hash_name"], r) for r in
+                        today.filter(pl.col("market_hash_name").is_in(held)).iter_rows(named=True))
         equity.append(_equity(t, book, last, cost, spec.fills))
         next_t = days[i + 1] if i + 1 < len(days) else t + timedelta(days=1)
-        pending = strategy.decide(_Market(bars, t), _Portfolio(book, next_t))
+        pending = strategy.decide(BarMarket(data, t), BookView(book, next_t))
+        for o in pending:
+            if o.qty <= 0:
+                raise InvariantViolation(f"strategy {spec.strategy} ordered {o}")
     data_version = store.data_version()
     spec_json = json.dumps(asdict(spec), default=str, sort_keys=True)
-    run_id = hashlib.sha256((spec_json + data_version).encode()).hexdigest()[:16]
+    # Universe and regime settings change what strategies see, so they are part of the run identity.
+    view_json = json.dumps([asdict(settings.universe), asdict(settings.regimes)], sort_keys=True)
+    run_id = hashlib.sha256((spec_json + view_json + data_version).encode()).hexdigest()[:16]
     return RunResult(
         run_id, spec, data_version,
         pl.DataFrame([asdict(f) for f in trades]) if trades else pl.DataFrame(),

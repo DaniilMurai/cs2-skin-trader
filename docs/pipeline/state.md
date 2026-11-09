@@ -8,7 +8,7 @@ Author's standing instruction (2026-11-09): work through tasks autonomously, com
 task or batch without asking; stop only for questions that need the author.
 Gates: passed up to and including stage 6 (author's go to stage 7, 2026-11-09)
 
-Next action: T-13 (data check), T-10 (collect status code); T-14 full backfill running; T-08/T-09 files ready, waiting for the author's GitHub setup and launchd install. Done 2026-11-09: T-01…T-07, T-11, T-12, T-15, T-18.
+Next action: T-20 (run output), T-21 (benchmarks) and T-28 (metrics); T-14 backfill running in data/backfill/ (merge its steam_points/steam_fetch_log into data/ when done, then T-16 real check and T-13 data check). Author: GitHub setup for T-08, launchd install for T-09. Done 2026-11-09: T-01…T-07, T-11…T-13, T-15, T-18, T-19.
 
 ## Stage history
 - 0 context load — 2026-11-09 (new project: README only, no git, Python 3.14.7, uv)
@@ -86,6 +86,18 @@ Next action: T-13 (data check), T-10 (collect status code); T-14 full backfill r
 - 2026-11-09 — Items (T-12): 27,209 feed names, 0 unknown; 26,681 by ByMykel DB, 528 by name rules
   (mostly Souvenir Charm highlights). Pins, passes, keys, terminals → `other`; souvenir highlight
   packages → `capsule`.
+- 2026-11-09 — Index (T-16): chain-linked median daily log return of items with a bar ≤ 7 days old,
+  30-day mean volume ≥ 5 and price ≥ $0.10; ≥ 10 items (≥ 5 per category) or the level holds.
+  Regime = 30-calendar-day index return vs ±5%.
+- 2026-11-09 — Engine (T-19): strategies see only `MarketData` views (history, universe, items, index,
+  regime); bars are loaded 400 days before `start` as warmup; universe and regime settings are part
+  of the run_id.
+- 2026-11-09 — Data check (T-13): first-sale date proxy = `items.release_date` (first point ≥ release −1 d;
+  ≤ release +7 d only for items with ≥ 100 points released after 2013). On slice data Recoil Case
+  fails it (DB release 2022-05-30, first Steam point 2022-07-01) → decide a tolerance after the
+  full backfill shows how many items fail.
+- 2026-11-09 — Steam backfill runs in its own data dir so its 19-hour DuckDB write lock doesn't block
+  other commands.
 - 2026-11-09 — Task order: the market.csgo collector (T-02…T-10) before the Steam backfill
   and everything else — collector days can't be recovered later.
 - 2026-11-09 — Event/seasonal strategy family has no known dated event source → spike S-09

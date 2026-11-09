@@ -93,7 +93,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: subagent
       Depends on: T-06
 
-- [ ] T-08 — GitHub Actions hourly collector + `cs2 collect pull`
+- [ ] T-08 — GitHub Actions hourly collector + `cs2 collect pull` *(workflow and pull done; needs the author's GitHub setup, ops/README.md)*
       Files: .github/workflows/collect.yml, src/cs2trader/collect.py, src/cs2trader/cli.py
       Do: hourly cron workflow: `uv sync`, `cs2 collect run --host gha`, push new Parquet
           files to the private repo `cs2-skin-data` with `DATA_REPO_TOKEN`; `cs2 collect pull`
@@ -104,7 +104,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: main loop
       Depends on: T-01, T-07
 
-- [ ] T-09 — Mac launchd gap filler
+- [ ] T-09 — Mac launchd gap filler *(plist ready; the author installs it, ops/README.md)*
       Files: ops/com.cs2trader.collect.plist, ops/README.md
       Do: a launchd agent running `cs2 collect run --kinds asks,bids --host mac` hourly
           (StartCalendarInterval, so a missed run fires on wake); logs to `data/logs/`.
@@ -114,7 +114,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: main loop
       Depends on: T-07
 
-- [ ] T-10 — `cs2 collect status`
+- [ ] T-10 — `cs2 collect status` *(code and tests done 2026-11-09; real 48 h check waits for T-08)*
       Files: src/cs2trader/collect.py, src/cs2trader/cli.py, tests/test_collect_status.py
       Do: `collect_status(window_h)`: snapshots in the window (a snapshot = an asks file and
           a bids file in the same hour), each one's item share vs the largest, gaps > 2 h
@@ -151,7 +151,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: subagent
       Depends on: T-04
 
-- [ ] T-13 — `cs2 data check [--categories]`
+- [x] T-13 — `cs2 data check [--categories]`
       Files: src/cs2trader/check.py, src/cs2trader/cli.py, tests/test_check.py
       Do: coverage vs universe, first date vs first sale date (≤ 7 days), duplicate
           (name, ts), every steam row has fx, rate in the request log ≤ 24/min; `--categories`:
@@ -161,7 +161,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: subagent
       Depends on: T-11, T-12
 
-- [ ] T-14 — Full Steam backfill run (operational, ~19 h)
+- [ ] T-14 — Full Steam backfill run (operational, ~19 h) *(running since 2026-11-09 ~16:00 UTC in data/backfill/, merged into data/ when done)*
       Files: — (data only)
       Do: `cs2 fx update`, then `cs2 backfill steam` over the feed universe in the background,
           resuming after cookie expiry (author refreshes `STEAM_LOGIN_SECURE`)
@@ -180,7 +180,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: subagent
       Depends on: T-02
 
-- [ ] T-16 — Market index, regimes, `cs2 regimes`
+- [ ] T-16 — Market index, regimes, `cs2 regimes` *(code and tests done 2026-11-09; real-data check waits for T-14)*
       Files: src/cs2trader/market/index.py, src/cs2trader/market/regimes.py,
              src/cs2trader/cli.py, tests/test_regimes.py
       Do: decide the index method (weights, how items enter and leave, chain-linking) and
@@ -216,7 +216,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: main loop
       Depends on: T-02
 
-- [ ] T-19 — Market/portfolio views and look-ahead guards
+- [x] T-19 — Market/portfolio views and look-ahead guards
       Files: src/cs2trader/backtest/view.py, src/cs2trader/backtest/engine.py,
              tests/test_lookahead.py
       Do: `MarketView` (history, universe, items, index, regime) raising `LookAheadError`

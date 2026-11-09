@@ -49,3 +49,7 @@ class LookAheadError(Cs2Error):
 
 class InvariantViolation(Cs2Error):
     pass
+
+
+class DataCheckFailed(Cs2Error):
+    exit_code = 6

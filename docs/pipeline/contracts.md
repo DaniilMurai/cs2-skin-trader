@@ -240,7 +240,8 @@ class Store:
 def collect_once(store: Store, kinds: Sequence[Literal["asks", "bids", "sales"]],
                  host: Literal["gha", "mac"], now: datetime) -> CollectReport: ...
 def sales_due(store: Store, now: datetime) -> list[str]: ...  # tiered by observed sales/day
-def collect_status(store: Store, window_h: int = 48) -> CollectStatus: ...  # AC-3
+def collect_status(store: Store, window_h: int = 48, now: datetime | None = None) -> CollectStatus: ...  # AC-3
+def format_status(status: CollectStatus) -> str: ...
 def pull_remote(store: Store, repo_url: str) -> int: ...  # git clone/pull of `mc.data_repo` into data/collector; files added
 
 @dataclass(frozen=True)
@@ -248,7 +249,8 @@ class CollectReport:
     kinds_ok: tuple[str, ...]; kinds_failed: tuple[str, ...]; files: tuple[Path, ...]
 @dataclass(frozen=True)
 class CollectStatus:
-    snapshots: int; min_item_share: float; gaps: tuple[tuple[datetime, datetime], ...]
+    snapshots: int; min_item_share: float; gaps: tuple[tuple[datetime, datetime], ...]  # (first slot start, last slot end, exclusive)
+    low_share: tuple[datetime, ...] = (); window_h: int = 48  # hours with item share < 90%
 
 # cs2trader/market/universe.py
 def universe(bars: pl.DataFrame, on: date, s: UniverseSettings) -> list[str]: ...  # data ≤ on only
@@ -495,6 +497,7 @@ class SchemaError(SourceError): ...        # unexpected shape or currency
 class FxMissing(Cs2Error): ...             # no rate for a needed day
 class LookAheadError(Cs2Error): ...        # MarketView asked for data after `now`
 class InvariantViolation(Cs2Error): ...    # negative qty, balance < 0 — always a bug
+class DataCheckFailed(Cs2Error): ...       # `cs2 data check` found a failing check
 ```
 
 | Exception | When | What the caller does |
@@ -509,6 +512,7 @@ class InvariantViolation(Cs2Error): ...    # negative qty, balance < 0 — alway
 | `FxMissing` | storing prices | refuse to store; run `cs2 fx update` first |
 | `LookAheadError` | engine | propagates: a strategy bug; fails AC-9 tests |
 | `InvariantViolation` | engine | propagates: an engine bug; fails AC-9 property test |
+| `DataCheckFailed` | `cs2 data check` | print the failing checks, exit 6 |
 
 ## Changes this stage forces on earlier artifacts
 - **AC-1** (plan.md): "USD converted with that day's official UAH→USD rate, no day lacks a rate"

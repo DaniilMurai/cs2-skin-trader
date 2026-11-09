@@ -9,6 +9,12 @@ import polars as pl
 Currency = Literal["USD", "UAH", "RUB"]
 
 
+class Regime(StrEnum):
+    RISING = "rising"
+    FALLING = "falling"
+    FLAT = "flat"
+
+
 class Category(StrEnum):
     # values from spike S-04; `unknown` must stay <= 1% (AC-4)
     KNIFE = "knife"

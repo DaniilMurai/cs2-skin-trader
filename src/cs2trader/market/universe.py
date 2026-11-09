@@ -7,16 +7,21 @@ from cs2trader.config import UniverseSettings
 WINDOW_DAYS = 30
 
 
-def universe(bars: pl.DataFrame, on: date, s: UniverseSettings) -> list[str]:
+def universe(bars: pl.DataFrame, on: date, s: UniverseSettings,
+             first_t: pl.DataFrame | None = None) -> list[str]:
+    """`first_t` (market_hash_name, first_t) lets the caller pass only recent bars: with it,
+    history length comes from that frame and `bars` needs to cover the last 30 days only."""
     b = bars.select("market_hash_name", "t", "price", "volume").filter(pl.col("t") <= on)
     name = "market_hash_name"
 
+    head = b.group_by(name).agg(
+        pl.col("t").min().alias("first_t"),
+        pl.col("price").sort_by("t").last().alias("last_price"),
+    )
+    if first_t is not None:
+        head = head.drop("first_t").join(first_t, on=name, how="inner")
     head = (
-        b.group_by(name)
-        .agg(
-            pl.col("t").min().alias("first_t"),
-            pl.col("price").sort_by("t").last().alias("last_price"),
-        )
+        head
         .filter(
             (pl.col("first_t") <= on - timedelta(days=s.min_history_days))
             & (pl.col("last_price") >= s.min_price_usd)

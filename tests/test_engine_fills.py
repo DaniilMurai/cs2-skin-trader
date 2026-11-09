@@ -63,6 +63,9 @@ def test_ac7_cashout_after_hold(monkeypatch):
         def data_version(self):
             return "fake"
 
+        def items_frame(self):
+            return pl.DataFrame(schema={"name": pl.String, "category": pl.String})
+
     monkeypatch.setitem(registry.REGISTRY, "round_trip",
                         registry.StrategyEntry("round_trip", "benchmark", OneRoundTrip, {}, ""))
     spec = RunSpec("round_trip", {}, 100.0, D0, D0 + timedelta(20), fills=NO_SPREAD)

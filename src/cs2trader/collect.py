@@ -1,7 +1,7 @@
 import subprocess
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Literal
 
@@ -153,3 +153,65 @@ def pull_remote(store: Store, repo_url: str) -> int:
         cmd = ["git", "clone", "-q", repo_url, str(tree)]
     subprocess.run(cmd, check=True)
     return sum(1 for _ in tree.rglob("*.parquet")) - before
+
+
+@dataclass(frozen=True)
+class CollectStatus:
+    snapshots: int
+    min_item_share: float
+    gaps: tuple[tuple[datetime, datetime], ...]
+    low_share: tuple[datetime, ...] = ()
+    window_h: int = 48
+
+
+def collect_status(store: Store, window_h: int = 48, now: datetime | None = None,
+                   min_share: float = 0.9, max_gap_h: int = 2) -> CollectStatus:
+    now = (now or datetime.now(UTC)).astimezone(UTC)
+    # A snapshot is identified by its UTC hour (floor of feed_time) and counts when that hour's
+    # start lies in (now - window_h, now]; the window therefore spans exactly window_h hour slots.
+    lo = now - timedelta(hours=window_h)
+    hours = store.db.execute("""
+        WITH a AS (
+            SELECT date_trunc('hour', feed_time AT TIME ZONE 'UTC') AS h, feed_time,
+                   count(DISTINCT market_hash_name) AS n
+            FROM asks GROUP BY ALL),
+        b AS (SELECT DISTINCT date_trunc('hour', feed_time AT TIME ZONE 'UTC') AS h FROM bids)
+        SELECT a.h, max(a.n) AS n FROM a JOIN b USING (h)
+        WHERE a.h > CAST(? AS TIMESTAMP) AND a.h <= CAST(? AS TIMESTAMP)
+        GROUP BY a.h ORDER BY a.h
+    """, [lo.replace(tzinfo=None), now.replace(tzinfo=None)]).fetchall()
+    hours = pl.DataFrame(hours, schema={"h": pl.Datetime("us"), "n": pl.Int64}, orient="row")
+    hours = hours.with_columns(pl.col("h").dt.replace_time_zone("UTC"))
+    if hours.is_empty():
+        first = now.replace(minute=0, second=0, microsecond=0) - timedelta(hours=window_h - 1)
+        return CollectStatus(0, 0.0, ((first, first + timedelta(hours=window_h)),) if window_h > max_gap_h else (),
+                             (), window_h)
+    share = pl.col("n") / pl.col("n").max()
+    hours = hours.with_columns(share.alias("share"))
+
+    # Gap = run of consecutive hour slots without a complete snapshot, longer than max_gap_h
+    # hours; reported as (start of its first slot, end of its last slot), i.e. end is exclusive.
+    first = now.replace(minute=0, second=0, microsecond=0) - timedelta(hours=window_h - 1)
+    grid = pl.DataFrame({"h": pl.datetime_range(first, now.replace(minute=0, second=0, microsecond=0),
+                                                "1h", time_zone="UTC", eager=True)})
+    miss = (grid.join(hours.select("h"), on="h", how="anti")
+            .with_columns((pl.col("h").diff() != timedelta(hours=1)).fill_null(True).cum_sum().alias("run"))
+            .group_by("run").agg(pl.col("h").min().alias("start"), pl.col("h").max().alias("last"))
+            .with_columns((pl.col("last") + timedelta(hours=1)).alias("end"))
+            .filter((pl.col("end") - pl.col("start")) > timedelta(hours=max_gap_h))
+            .sort("start"))
+    gaps = tuple(zip(miss["start"].to_list(), miss["end"].to_list(), strict=True))
+    low = hours.filter(pl.col("share") < min_share)["h"].to_list()
+    return CollectStatus(hours.height, float(hours["share"].min()), gaps, tuple(low), window_h)
+
+
+def format_status(status: CollectStatus) -> str:
+    ok = "ok" if status.snapshots >= 44 * status.window_h // 48 else "below target"
+    lines = [
+        f"snapshots: {status.snapshots} in last {status.window_h} h ({ok}; AC-3 needs >= 44 per 48 h)",
+        f"min item share: {status.min_item_share:.1%} (flag below 90%)",
+    ]
+    lines += [f"gap: {a:%Y-%m-%d %H:%M} -> {b:%Y-%m-%d %H:%M} UTC ({(b - a).total_seconds() / 3600:.0f} h)"
+              for a, b in status.gaps] or ["gaps > 2 h: none"]
+    lines += [f"low share: {h:%Y-%m-%d %H:%M} UTC" for h in status.low_share]
+    return "\n".join(lines)

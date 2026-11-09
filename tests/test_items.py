@@ -6,6 +6,7 @@ import httpx
 import polars as pl
 import pytest
 
+from cs2trader.check import AC4
 from cs2trader.items import update_items
 from cs2trader.models import Category, FxRate, ItemInfo, SteamPoint
 from cs2trader.sources import items_db
@@ -13,31 +14,6 @@ from cs2trader.sources.items_db import classify, fetch_items_db
 from cs2trader.store import Store
 
 DB = list(json.loads((Path(__file__).parent / "fixtures" / "items_db_sample.json").read_text()).values())
-
-# The fixed AC-4 list: (name, category, source)
-AC4 = [
-    ("★ Karambit | Doppler (Factory New)", Category.KNIFE, "db"),
-    ("★ StatTrak™ Bayonet | Autotronic (Field-Tested)", Category.KNIFE, "db"),
-    ("★ Sport Gloves | Amphibious (Field-Tested)", Category.GLOVE, "db"),
-    ("★ Hand Wraps | Arboreal (Factory New)", Category.GLOVE, "db"),
-    ("AK-47 | Redline (Field-Tested)", Category.WEAPON_SKIN, "db"),
-    ("StatTrak™ AWP | Asiimov (Field-Tested)", Category.WEAPON_SKIN, "db"),
-    ("Souvenir AWP | Acheron (Factory New)", Category.WEAPON_SKIN, "db"),
-    ("Sticker | 00 Nation (Holo) | Rio 2022", Category.STICKER, "db"),
-    ("Recoil Case", Category.CASE, "db"),
-    ("10 Year Birthday Sticker Capsule", Category.CAPSULE, "db"),
-    ("Antwerp 2022 Dust II Souvenir Package", Category.SOUVENIR_PACKAGE, "db"),
-    ("Sealed Graffiti | 100 Thieves | Boston 2018", Category.GRAFFITI, "db"),
-    ("Charm | 8 Ball IGL", Category.CHARM, "db"),
-    ("Souvenir Charm | Austin 2025 Highlight | 180 One Tap", Category.CHARM, "rule"),
-    ("Patch | Abandon Hope", Category.PATCH, "db"),
-    ("Music Kit | Adam Beyer, Red Room", Category.MUSIC_KIT, "db"),
-    ("Deluge Music Kit Box", Category.MUSIC_KIT_BOX, "db"),
-    ("Bloody Darryl The Strapped | The Professionals", Category.AGENT, "db"),
-    ("Austin 2025 Viewer Pass", Category.OTHER, "db"),
-    ("Totally New Gadget", Category.UNKNOWN, "none"),
-]
-
 
 def test_ac4_list():
     assert len(AC4) == 20
