@@ -148,3 +148,7 @@ Next action: T-33 closed 2026-11-10 (full report 57 min, hash c1c2074822aba264, 
   and everything else — collector days can't be recovered later.
 - 2026-11-09 — Event/seasonal strategy family has no known dated event source → spike S-09
   inside T-27; the family may be dropped or narrowed.
+- 2026-11-09 — The launchd collector opened `data/cs2.duckdb` for writing every hour and collided with a running
+  report or backfill (lock error). Fixed: `collect run`, `collect status` and `collect pull` use
+  `Store(..., in_memory=True)` — they need only the Parquet views and never touch the file. Tested against a
+  process holding the database.

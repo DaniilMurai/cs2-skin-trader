@@ -63,10 +63,32 @@ def cap_price_jumps(bars: pl.DataFrame) -> pl.DataFrame:
 
 
 class Store:
-    def __init__(self, data_dir: Path) -> None:
-        data_dir.mkdir(parents=True, exist_ok=True)
+    def __init__(self, data_dir: Path, read_only: bool = False, in_memory: bool = False) -> None:
+        """`read_only` needs a database a writable Store has already created; DuckDB allows
+        several read-only processes at once, but only while no process has it open for writing.
+        `in_memory` never touches cs2.duckdb (only the Parquet views work), so the hourly
+        collector can't collide with a long report or backfill holding the file."""
         self.data_dir = data_dir
-        self.db = duckdb.connect(str(data_dir / "cs2.duckdb"))
+        self.read_only = read_only
+        self.in_memory = in_memory
+        self.open()
+
+    def open(self) -> None:
+        if self.in_memory:
+            self.data_dir.mkdir(parents=True, exist_ok=True)
+            self.db = duckdb.connect(":memory:")
+            self.db.execute("SET TimeZone = 'UTC'")
+            self.db.execute(SCHEMA)
+            for kind in _VIEW_COLUMNS:
+                self._create_view(kind)
+            self._create_sales_view()
+            return
+        if self.read_only:
+            self.db = duckdb.connect(str(self.data_dir / "cs2.duckdb"), read_only=True)
+            self.db.execute("SET TimeZone = 'UTC'")
+            return
+        self.data_dir.mkdir(parents=True, exist_ok=True)
+        self.db = duckdb.connect(str(self.data_dir / "cs2.duckdb"))
         self.db.execute("SET TimeZone = 'UTC'")
         self.db.execute(SCHEMA)
         for kind in _VIEW_COLUMNS:

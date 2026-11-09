@@ -155,6 +155,7 @@ uv run cs2 report --strategies mean_reversion   # walk-forward + holdout + verdi
   (`cs2trader.backfill.merge_from`).
 - Collector scheduling: `.github/workflows/collect.yml` (needs repo setup) and `ops/` (launchd), see
   `ops/README.md`. `cs2 collect pull` fetches the GitHub collector's files.
+- The collector commands (`collect run/status/pull`) use an in-memory DuckDB and never lock `data/cs2.duckdb`.
 - Not yet wired: `ratio` (needs ≥ 14 days of snapshots), `forward` (≥ 28 days).
 
 ## Glossary

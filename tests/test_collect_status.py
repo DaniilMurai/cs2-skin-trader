@@ -67,3 +67,23 @@ def test_larger_asks_file_in_hour_and_empty(tmp_path):
     put(s, 1, n=10)
     st = collect_status(s, window_h=6, now=NOW)
     assert st.snapshots == 2 and st.min_item_share == 1.0
+
+
+def test_collect_commands_run_while_another_process_holds_the_database(tmp_path):
+    import subprocess
+    import sys
+
+    from cs2trader.store import Store
+
+    data = tmp_path / "data"
+    Store(data).close()
+    holder = subprocess.Popen([sys.executable, "-c",
+                               "import duckdb,sys,time; c=duckdb.connect(sys.argv[1]); print('ok', flush=True); time.sleep(60)",
+                               str(data / "cs2.duckdb")], stdout=subprocess.PIPE, text=True)
+    try:
+        assert holder.stdout.readline().strip() == "ok"
+        r = subprocess.run([sys.executable, "-c", "from cs2trader.cli import main; main()", "collect", "status"],
+                           cwd=tmp_path, capture_output=True, text=True, check=False)
+        assert r.returncode == 0 and "lock" not in r.stderr.lower(), r.stderr
+    finally:
+        holder.kill()

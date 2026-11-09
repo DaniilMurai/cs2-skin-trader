@@ -152,12 +152,12 @@ def cmd_data_check(args: argparse.Namespace) -> None:
 
 
 def cmd_collect_status(args: argparse.Namespace) -> None:
-    print(format_status(collect_status(Store(load_settings().data_dir), args.hours)))
+    print(format_status(collect_status(Store(load_settings().data_dir, in_memory=True), args.hours)))
 
 
 def cmd_collect_pull(args: argparse.Namespace) -> None:
     settings = load_settings()
-    print(f"pull: {pull_remote(Store(settings.data_dir), settings.mc.data_repo)} files added")
+    print(f"pull: {pull_remote(Store(settings.data_dir, in_memory=True), settings.mc.data_repo)} files added")
 
 
 def cmd_collect_run(args: argparse.Namespace) -> None:
@@ -167,7 +167,7 @@ def cmd_collect_run(args: argparse.Namespace) -> None:
         raise ConfigError(f"--kinds: unknown {bad or 'empty list'}; use asks,bids,sales")
     overrides = {"mc.sales_max_names_per_run": args.sales_max} if args.sales_max is not None else {}
     settings = load_settings(**overrides)
-    _report, failed, rows = run_collect(Store(settings.data_dir), kinds, args.host, datetime.now(UTC), settings)
+    _report, failed, rows = run_collect(Store(settings.data_dir, in_memory=True), kinds, args.host, datetime.now(UTC), settings)
     for kind in kinds:
         if kind in failed:
             saved = f", {rows_saved} rows saved" if (rows_saved := getattr(failed[kind], "rows_saved", 0)) else ""
