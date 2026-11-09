@@ -8,7 +8,7 @@ Author's standing instruction (2026-11-09): work through tasks autonomously, com
 task or batch without asking; stop only for questions that need the author.
 Gates: passed up to and including stage 6 (author's go to stage 7, 2026-11-09)
 
-Next action: wait for T-14 (Steam backfill in data/backfill/, ~28 h from 2026-11-09 15:49 UTC), then merge it into data/ (`merge_from`), run `cs2 items update`, `cs2 data check --categories`, `cs2 regimes` (T-16 real check), T-27a first-point check, V1/V2 2019–2025 runs, T-33 full report. Author: GitHub setup for T-08, launchd install for T-09. Done 2026-11-09: T-01…T-07, T-11…T-13, T-15, T-18…T-21, T-24…T-26, T-27, T-27b, T-28…T-31; code-only (real-data check pending): T-10, T-16, T-22, T-23, T-27a.
+Next action: wait for T-14 (Steam backfill in data/backfill/; restarted 2026-11-09 ~22:20 local with the bulk-insert fix and interval 1.0 s, ~7 h remaining, was ~25 h), then merge it into data/ (`merge_from`), run `cs2 items update`, `cs2 data check --categories`, `cs2 regimes` (T-16 real check), T-27a first-point check, V1/V2 2019–2025 runs, T-33 full report. Author: GitHub setup for T-08, launchd install for T-09. Done 2026-11-09: T-01…T-07, T-11…T-13, T-15, T-18…T-21, T-24…T-26, T-27, T-27b, T-28…T-31; code-only (real-data check pending): T-10, T-16, T-22, T-23, T-27a.
 
 ## Stage history
 - 0 context load — 2026-11-09 (new project: README only, no git, Python 3.14.7, uv)
@@ -24,6 +24,10 @@ Next action: wait for T-14 (Steam backfill in data/backfill/, ~28 h from 2026-11
   time-gated by collected days; T-27 event strategy needs spike S-09 first)
 
 ## Draft decisions (to collect into decisions.md at stage 9)
+- 2026-11-09 — Backfill speed (T-14): the bottleneck was `upsert_steam` (executemany, 2.6 s per item, 85% of
+  run time), not Steam's rate limit. Bulk Arrow insert → ~0.1 s. Steam interval lowered 2.5 → 1.0 s after
+  probes at 1.5 s (160 requests) and 1.0 s (100 requests): all HTTP 200, no 429. Not pushed below 1.0 s.
+  The 2.5 s default was only the one pace tried in S-01 (60 requests), never a measured limit.
 - 2026-11-09 — Data: Steam price history + own forward collector, no paid APIs.
 - 2026-11-09 — Target venue: market.csgo. Steam history is a proxy for its past;
   our own collector records market.csgo snapshots from now on.

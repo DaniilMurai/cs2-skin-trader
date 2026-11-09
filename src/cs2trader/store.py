@@ -191,11 +191,22 @@ class Store:
         for p in points:
             if p.currency != fx.base:
                 raise FxMissing(f"{p.market_hash_name}: price in {p.currency}, rate is {fx.base}")
-        self.db.executemany(
-            "INSERT OR REPLACE INTO steam_points VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        if not points:
+            return 0
+        # executemany into a primary-keyed table costs ~0.65 ms/row (2.6 s per 4,000-point item,
+        # 85% of the full backfill time); one Arrow-backed statement is ~25x faster
+        frame = pl.DataFrame(
             [(p.market_hash_name, p.ts, p.granularity, p.price_raw, p.currency, p.volume,
               fx.per_usd, fx.day, p.price_raw / fx.per_usd) for p in points],
+            schema=["name", "ts", "granularity", "price_raw", "currency", "volume",
+                    "fx_per_usd", "fx_day", "price_usd"],
+            orient="row",
         )
+        self.db.register("_steam_batch", frame.to_arrow())
+        try:
+            self.db.execute("INSERT OR REPLACE INTO steam_points SELECT * FROM _steam_batch")
+        finally:
+            self.db.unregister("_steam_batch")
         return len(points)
 
     def mark_fetched(self, name: str, status: Literal["ok", "empty", "error"], n_points: int) -> None:
