@@ -13,7 +13,7 @@ Until then they are skipped and the next task in order is taken.
 
 ## A. Repository and the market.csgo collector (Plan step 1, AC-3)
 
-- [ ] T-01 — git repository and first commit
+- [x] T-01 — git repository and first commit
       Files: .gitignore, (git)
       Do: `git init`; check that `.env`, `data/`, `reports/`, `.idea/`, caches are ignored;
           commit the slice as it is. The author makes the commit (no commit without an
@@ -23,7 +23,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: main loop
       Depends on: —
 
-- [ ] T-02 — Settings from `cs2.toml` + CLI overrides
+- [x] T-02 — Settings from `cs2.toml` + CLI overrides
       Files: src/cs2trader/config.py, cs2.toml, src/cs2trader/cli.py, tests/test_config.py
       Do: `Settings` with every row of the contracts Configuration table and its default;
           `load_settings(path, **overrides)`; a bad type or unknown key → `ConfigError`;

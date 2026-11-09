@@ -1,0 +1,11 @@
+# Overrides for built-in defaults (see docs/pipeline/contracts.md, Configuration). No secrets here.
+data_dir = "data"
+reports_dir = "reports"
+
+[steam]
+interval_s = 2.5
+max_retries = 3
+
+[mc]
+interval_s = 2.5
+sales_batch = 20

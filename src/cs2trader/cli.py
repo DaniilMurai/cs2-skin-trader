@@ -5,25 +5,25 @@ from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 from cs2trader.backtest.engine import run
-from cs2trader.config import require_secret
+from cs2trader.config import load_settings, require_secret
 from cs2trader.errors import Cs2Error, SourceUnavailable
 from cs2trader.models import RunSpec
 from cs2trader.sources import fx, steam
 from cs2trader.store import Store
 
-DATA_DIR = Path("data")
-
 
 def cmd_fx_update(args: argparse.Namespace) -> None:
     today = datetime.now(UTC).date()
-    n = Store(DATA_DIR).upsert_fx(fx.fetch_rates("UAH", today - timedelta(days=30), today))
+    n = Store(load_settings().data_dir).upsert_fx(fx.fetch_rates("UAH", today - timedelta(days=30), today))
     print(f"fx: {n} UAH rates stored")
 
 
 def cmd_backfill_steam(args: argparse.Namespace) -> None:
-    store = Store(DATA_DIR)
+    settings = load_settings()
+    store = Store(settings.data_dir)
     rate = store.fx(datetime.now(UTC).date(), "UAH")
-    client = steam.SteamClient(require_secret("STEAM_LOGIN_SECURE"), interval_s=2.5, max_retries=3)
+    client = steam.SteamClient(require_secret("STEAM_LOGIN_SECURE"), interval_s=settings.steam.interval_s,
+                               max_retries=settings.steam.max_retries)
     names = [n for n in Path(args.names).read_text().splitlines() if n.strip()]
     done = store.fetched_names()
     for name in names:
@@ -42,10 +42,11 @@ def cmd_backfill_steam(args: argparse.Namespace) -> None:
 
 
 def cmd_backtest(args: argparse.Namespace) -> None:
+    settings = load_settings()
     spec = RunSpec(args.strategy, json.loads(args.params), args.capital,
                    date.fromisoformat(args.date_from), date.fromisoformat(args.date_to))
-    result = run(spec, Store(DATA_DIR))
-    out = DATA_DIR / "runs" / result.run_id
+    result = run(spec, Store(settings.data_dir))
+    out = settings.data_dir / "runs" / result.run_id
     out.mkdir(parents=True, exist_ok=True)
     result.trades.write_parquet(out / "trades.parquet")
     result.equity.write_parquet(out / "equity.parquet")
