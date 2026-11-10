@@ -96,8 +96,8 @@ def write_log(path: Path, n: int, spacing_s: float) -> Path:
 
 def test_request_rate(tmp_path):
     store = good_store(tmp_path / "db")
-    assert run(store, write_log(tmp_path / "ok.tsv", 100, 2.6))["request_rate"].ok  # 24 per 60 s
-    assert not run(store, write_log(tmp_path / "fast.tsv", 100, 2.0))["request_rate"].ok  # 30 per 60 s
+    assert run(store, write_log(tmp_path / "ok.tsv", 200, 1.0))["request_rate"].ok  # 60 per 60 s
+    assert not run(store, write_log(tmp_path / "fast.tsv", 200, 0.8))["request_rate"].ok  # 75 per 60 s
     missing = run(store, tmp_path / "none.tsv")["request_rate"]
     assert missing.ok and missing.detail == "no log"
 

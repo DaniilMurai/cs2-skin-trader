@@ -8,7 +8,7 @@ Author's standing instruction (2026-11-09): work through tasks autonomously, com
 task or batch without asking; stop only for questions that need the author.
 Gates: passed up to and including stage 6 (author's go to stage 7, 2026-11-09)
 
-Next action: wait for T-14 (Steam backfill in data/backfill/; restarted 2026-11-09 ~22:20 local with the bulk-insert fix and interval 1.0 s, ~7 h remaining, was ~25 h), then merge it into data/ (`merge_from`), run `cs2 items update`, `cs2 data check --categories`, `cs2 regimes` (T-16 real check), T-27a first-point check, V1/V2 2019–2025 runs, T-33 full report. Author: GitHub setup for T-08, launchd install for T-09. Done 2026-11-09: T-01…T-07, T-11…T-13, T-15, T-18…T-21, T-24…T-26, T-27, T-27b, T-28…T-31; code-only (real-data check pending): T-10, T-16, T-22, T-23, T-27a.
+Next action: T-14 backfill finished 2026-11-10 (26,785 items with history, 50.5 M points, merged into data/; `cs2 regimes` ran on it, T-16 real check OK). `cs2 data check --categories` fails ONLY on first_date (author's call on the tolerance, see decisions below). After that: T-27a first-point check, V1/V2 2019–2025 runs, T-33 full report. Done 2026-11-09: T-01…T-07, T-11…T-13, T-15, T-18…T-21, T-24…T-26, T-27, T-27b, T-28…T-31; code-only (real-data check pending): T-10, T-16, T-22, T-23, T-27a.
 
 ## Stage history
 - 0 context load — 2026-11-09 (new project: README only, no git, Python 3.14.7, uv)
@@ -24,6 +24,11 @@ Next action: wait for T-14 (Steam backfill in data/backfill/; restarted 2026-11-
   time-gated by collected days; T-27 event strategy needs spike S-09 first)
 
 ## Draft decisions (to collect into decisions.md at stage 9)
+- 2026-11-10 — Backfill (T-14) result: 24,311 ok, 424 empty, 0 errors (+2,474 from the first run). The FX rate is now looked up per
+  item, so a run crossing midnight UTC uses each fetch day's rate; 25.0 M rows fetched on 2026-11-10 re-priced with that day's NBU rate.
+- 2026-11-10 — AC-1 request-rate limit amended 24 → 62 per minute (24 was the S-01 pace, not a Steam limit; 1.0 s/request ran 260 requests without a 429).
+- 2026-11-10 — first_date check fails on 40% of 12,202 items (release-date proxy): median first point = release +1 d, 75th pct +8 d, 95th pct +33 d;
+  5% first-point before release −1 d. Tolerance rule not decided yet.
 - 2026-11-09 — Backfill speed (T-14): the bottleneck was `upsert_steam` (executemany, 2.6 s per item, 85% of
   run time), not Steam's rate limit. Bulk Arrow insert → ~0.1 s. Steam interval lowered 2.5 → 1.0 s after
   probes at 1.5 s (160 requests) and 1.0 s (100 requests): all HTTP 200, no 429. Not pushed below 1.0 s.

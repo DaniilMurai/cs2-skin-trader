@@ -161,7 +161,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: subagent
       Depends on: T-11, T-12
 
-- [ ] T-14 — Full Steam backfill run (operational, ~19 h) *(running since 2026-11-09 ~16:00 UTC in data/backfill/, merged into data/ when done)*
+- [ ] T-14 — Full Steam backfill run (operational) *(finished and merged 2026-11-10; the check passes except first_date, tolerance pending)*
       Files: — (data only)
       Do: `cs2 fx update`, then `cs2 backfill steam` over the feed universe in the background,
           resuming after cookie expiry (author refreshes `STEAM_LOGIN_SECURE`)

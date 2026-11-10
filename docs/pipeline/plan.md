@@ -31,7 +31,7 @@ AC-1: Given — the universe list and a valid `STEAM_LOGIN_SECURE` in `.env`.
       When — `cs2 backfill steam` runs to completion (resumable after interruption).
       Then — `cs2 data check` reports ≥ 95% of universe items with history; each item's
       first date is within 7 days of its first Steam sale date; no item has duplicate
-      dates; the run log shows no request rate above 24 requests/min (spike S-01);
+      dates; the run log shows no request rate above 62 requests/min (amended 2026-11-10 from 24: the 24 was the pace tried in S-01, 1.0 s/request ran clean);
       every stored price has both the raw wallet-currency value (UAH) and a USD value
       = raw / the NBU UAH→USD rate on the item's fetch day (Steam converts the whole
       history at one current rate, spike S-08), and no item lacks a rate.

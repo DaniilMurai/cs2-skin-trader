@@ -13,7 +13,9 @@ from cs2trader.store import Store
 
 MIN_COVERAGE = 0.95
 MAX_UNKNOWN_SHARE = 0.01
-MAX_REQUESTS_PER_MIN = 24
+# 24 was the one pace tried in S-01, not a Steam limit; 1.0 s/request (60/min, +2 for window edges)
+# ran 260 requests without a 429 (2026-11-09 interval probes)
+MAX_REQUESTS_PER_MIN = 62
 FIRST_DATE_WINDOW_DAYS = 7
 # The upper first-date bound only makes sense for items that traded continuously: a thin item
 # can legitimately have its first Steam sale months after release.
