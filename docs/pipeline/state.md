@@ -8,7 +8,7 @@ Author's standing instruction (2026-11-09): work through tasks autonomously, com
 task or batch without asking; stop only for questions that need the author.
 Gates: passed up to and including stage 6 (author's go to stage 7, 2026-11-09)
 
-Next action: T-14 and T-27a closed 2026-11-10. Now: V1/V2 2019–2025 runs (T-22, T-23 real-data check), T-33 full report. Done 2026-11-09: T-01…T-07, T-11…T-13, T-15, T-18…T-21, T-24…T-26, T-27, T-27b, T-28…T-31; code-only (real-data check pending): T-10, T-22, T-23 (T-16 checked on real data 2026-11-10).
+Next action: T-33 closed 2026-11-10 (full report 57 min, hash c1c2074822aba264, verdict: no strategy holds up at $100 / $1,000). Remaining implementation tasks are time-gated or need the author: T-09 (check ≥ 2 `-mac.parquet` files), T-10 (collector status after 48 h), T-17 (ratio, ≥ 14 days, ~2026-11-23), T-34, T-32 (≥ 28 days, ~2026-12-07). Proposed next: stage 8 audit in a fresh context, starting with xs_momentum's +1,622% holdout at $100. Done 2026-11-09: T-01…T-07, T-11…T-13, T-15, T-18…T-21, T-24…T-26, T-27, T-27b, T-28…T-31; code-only (real-data check pending): T-10 (T-16, T-22, T-23 checked on real data 2026-11-10).
 
 ## Stage history
 - 0 context load — 2026-11-09 (new project: README only, no git, Python 3.14.7, uv)
@@ -24,6 +24,13 @@ Next action: T-14 and T-27a closed 2026-11-10. Now: V1/V2 2019–2025 runs (T-22
   time-gated by collected days; T-27 event strategy needs spike S-09 first)
 
 ## Draft decisions (to collect into decisions.md at stage 9)
+- 2026-11-10 — Report speed (T-33): runs are Python-bound (threads gave 1.5×), so `cs2 report --jobs N` fans tuning and test runs out to
+  N spawned processes that share one memory-mapped Arrow copy of the prepared market; the in-process path stays the reference and both give
+  the same hash. Default jobs = cores − 2. Results are equal to ~1e-14, not bit-identical; the hash rounds to 9 decimals.
+- 2026-11-10 — Walk-forward chaining bug fixed: the 5% withdrawal haircut was compounded once per fold (do-nothing cash showed −70.8%);
+  now each fold is rescaled from its own first bar, so it applies once. Verdicts (holdout-based) were not affected.
+- 2026-11-10 — First full verdict: no strategy holds up at $100 or $1,000 (holdout 2025-10-01 → 2026-11-10). Open doubts for the audit:
+  xs_momentum holdout +1,622% at $100 with a 99.6% drawdown; bh_universe makes no trades at $100 (equals cash, so "beats buy-and-hold" is moot there).
 - 2026-11-10 — Backfill (T-14) result: 24,311 ok, 424 empty, 0 errors (+2,474 from the first run). The FX rate is now looked up per
   item, so a run crossing midnight UTC uses each fetch day's rate; 25.0 M rows fetched on 2026-11-10 re-priced with that day's NBU rate.
 - 2026-11-10 — AC-1 request-rate limit amended 24 → 62 per minute (24 was the S-01 pace, not a Steam limit; 1.0 s/request ran 260 requests without a 429).
