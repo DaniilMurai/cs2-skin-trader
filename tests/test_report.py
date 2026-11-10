@@ -70,3 +70,16 @@ def test_worker_processes_give_the_same_results(bars):
     two = results_table(Store(bars), SETTINGS, names, jobs=2)
     assert results_hash(one) == results_hash(two)
     assert one.equals(two)
+
+
+def test_chained_walk_forward_applies_the_withdrawal_fee_once(bars):
+    t = results_table(Store(bars), SETTINGS, ["cash"])
+    wf = t.filter((pl.col("strategy") == "cash") & (pl.col("period") == "walk_forward")
+                  & (pl.col("regime") == "all") & (pl.col("capital") == 1000.0))
+    ho = t.filter((pl.col("strategy") == "cash") & (pl.col("period") == "holdout")
+                  & (pl.col("regime") == "all") & (pl.col("capital") == 1000.0))
+    # Holding cash over any span costs the one withdrawal haircut, however many folds it is cut into.
+    assert wf.filter(pl.col("unit") == "cash")["net_return"][0] == pytest.approx(
+        ho.filter(pl.col("unit") == "cash")["net_return"][0])
+    assert wf.filter(pl.col("unit") == "steam")["net_return"][0] == pytest.approx(
+        ho.filter(pl.col("unit") == "steam")["net_return"][0])

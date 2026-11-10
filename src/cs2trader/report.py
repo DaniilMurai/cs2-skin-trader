@@ -68,16 +68,20 @@ def _period_rows(strategy: str, capital: float, period: str, res: RunResult,
 
 def _chain_folds(runs: list[RunResult], capital: float) -> RunResult:
     """Walk-forward as one run: every fold starts with the full capital, so fold k's equity is
-    rescaled to start from where fold k-1 ended (fold returns are compounded). Fees stay in
+    rescaled to continue from where fold k-1 ended (fold returns are compounded). Each unit is
+    rescaled by its own factor against the fold's first bar. The first bar is struck before any
+    trade, so it already carries the withdrawal haircut: scaling by the first bar, not by the
+    capital, applies that fee once to the whole path instead of once per fold. Fees stay in
     dollars of their own fold and are accumulated without rescaling."""
-    eq_parts, level, fees = [], capital, 0.0
+    eq_parts, fees = [], 0.0
+    level_cash, level_steam = runs[0].equity["equity_cash"][0], runs[0].equity["equity_steam"][0]
     for r in runs:
-        k = level / capital
-        eq = r.equity.with_columns((pl.col("equity_cash") * k), (pl.col("equity_steam") * k),
-                                   (pl.col("fees_paid") + fees))
+        k_cash = level_cash / r.equity["equity_cash"][0]
+        k_steam = level_steam / r.equity["equity_steam"][0]
+        eq = r.equity.with_columns(pl.col("equity_cash") * k_cash, pl.col("equity_steam") * k_steam,
+                                   pl.col("fees_paid") + fees)
         eq_parts.append(eq)
-        level = eq["equity_cash"][-1]
-        fees = eq["fees_paid"][-1]
+        level_cash, level_steam, fees = eq["equity_cash"][-1], eq["equity_steam"][-1], eq["fees_paid"][-1]
     trades = pl.concat([r.trades for r in runs if r.trades.height], how="diagonal_relaxed") \
         if any(r.trades.height for r in runs) else runs[0].trades
     return RunResult("walk_forward", runs[0].spec, runs[0].data_version, trades,
