@@ -1,6 +1,9 @@
 import hashlib
 import html
 import re
+import sys
+import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -12,7 +15,7 @@ from cs2trader.config import Settings, load_settings
 from cs2trader.evaluate import (
     WalkForwardResult,
     folds,
-    holdout,
+    holdout_spec,
     make_spec,
     metrics,
     walk_forward,
@@ -20,6 +23,7 @@ from cs2trader.evaluate import (
 from cs2trader.market.index import market_index
 from cs2trader.market.regimes import label_regimes
 from cs2trader.models import Metrics, RunResult, Verdict
+from cs2trader.parallel import LocalRunner, PoolRunner
 from cs2trader.store import Store
 from cs2trader.strategies.registry import REGISTRY
 
@@ -91,8 +95,10 @@ def _regime_labels(store: Store, settings: Settings) -> pl.DataFrame:
     return labels.select("t", "regime")
 
 
-def evaluate_all(store: Store, settings: Settings,
-                 strategies: list[str] | None = None) -> Evaluation:
+def evaluate_all(store: Store, settings: Settings, strategies: list[str] | None = None,
+                 jobs: int = 1, progress: bool = False) -> Evaluation:
+    """`jobs` > 1 runs the backtests in that many worker processes; the results are identical to
+    `jobs=1` (each tuning window is independent), only the wall time changes."""
     names = list(REGISTRY) if strategies is None else strategies
     unknown = [n for n in names if n not in REGISTRY]
     if unknown:
@@ -103,28 +109,43 @@ def evaluate_all(store: Store, settings: Settings,
     end = store.last_day()
     data = load_market(store, wf_s.start, end, settings)
     regimes = _regime_labels(store, settings)
+    combos = [(capital, name) for capital in settings.capitals for name in names]
+    started, done = time.monotonic(), []
+
+    def one(runner, capital: float, name: str):
+        entry = REGISTRY[name]
+        wf = walk_forward(entry, capital, store, wf_s, settings, runner=runner)
+        ho = runner.submit_run(holdout_spec(entry, wf.chosen_params, capital, wf_s, end, False, settings))
+        ho_s = runner.submit_run(holdout_spec(entry, wf.chosen_params, capital, wf_s, end, True, settings))
+        out = wf, ho.result(), ho_s.result()
+        done.append(name)
+        if progress:
+            print(f"[{len(done)}/{len(combos)}] {name} ${capital:,.0f} done, "
+                  f"{(time.monotonic() - started) / 60:.1f} min elapsed", file=sys.stderr, flush=True)
+        return out
+
+    if jobs > 1:
+        with PoolRunner(store, settings, data, jobs) as runner, ThreadPoolExecutor(len(combos)) as threads:
+            del data
+            results = list(threads.map(lambda c: one(runner, *c), combos))
+    else:
+        runner = LocalRunner(store, settings, data)
+        results = [one(runner, *c) for c in combos]
+
     rows: list[dict] = []
     verdicts: list[Verdict] = []
-    for capital in settings.capitals:
-        ho_runs: dict[str, RunResult] = {}
-        for name in names:
-            entry = REGISTRY[name]
-            wf = walk_forward(entry, capital, store, wf_s, settings, data)
-            fold_runs = []
-            for i, (_, _, te0, te1) in enumerate(folds(wf_s)):
-                _, _, params, _ = wf.folds[i]
-                res = run(make_spec(name, params, capital, te0, te1, settings), store, settings, data)
-                fold_runs.append(res)
-                rows += _rows(name, capital, f"{FOLD_PREFIX}{i:02d}", "all", metrics(res))
-            if fold_runs:
-                rows += _period_rows(name, capital, "walk_forward", _chain_folds(fold_runs, capital), regimes)
-            ho = holdout(entry, wf.chosen_params, capital, store, wf_s, False, settings, end, data)
-            ho_s = holdout(entry, wf.chosen_params, capital, store, wf_s, True, settings, end, data)
-            rows += _period_rows(name, capital, "holdout", ho, regimes)
-            rows += _period_rows(name, capital, "holdout_stress", ho_s, regimes)
-            ho_runs[name] = ho
-            if entry.family != "benchmark":
-                verdicts.append(_verdict(name, capital, wf, ho, ho_s, ho_runs))
+    ho_runs: dict[float, dict[str, RunResult]] = {c: {} for c in settings.capitals}
+    for (capital, name), (wf, ho, ho_s) in zip(combos, results):
+        entry = REGISTRY[name]
+        for i, res in enumerate(wf.test_runs):
+            rows += _rows(name, capital, f"{FOLD_PREFIX}{i:02d}", "all", metrics(res))
+        if wf.test_runs:
+            rows += _period_rows(name, capital, "walk_forward", _chain_folds(list(wf.test_runs), capital), regimes)
+        rows += _period_rows(name, capital, "holdout", ho, regimes)
+        rows += _period_rows(name, capital, "holdout_stress", ho_s, regimes)
+        ho_runs[capital][name] = ho
+        if entry.family != "benchmark":
+            verdicts.append(_verdict(name, capital, wf, ho, ho_s, ho_runs[capital]))
     return Evaluation(pl.DataFrame(rows, schema=SCHEMA).sort(KEY), verdicts)
 
 
@@ -136,8 +157,8 @@ def _verdict(name: str, capital: float, wf: WalkForwardResult, ho: RunResult, ho
 
 
 def results_table(store: Store, settings: Settings | None = None,
-                  strategies: list[str] | None = None) -> pl.DataFrame:
-    return evaluate_all(store, settings or load_settings(), strategies).results
+                  strategies: list[str] | None = None, jobs: int = 1) -> pl.DataFrame:
+    return evaluate_all(store, settings or load_settings(), strategies, jobs).results
 
 
 def results_hash(results: pl.DataFrame) -> str:
@@ -242,9 +263,9 @@ def _assumptions(store: Store, settings: Settings, end) -> str:
 
 
 def build_report(store: Store, out_dir: Path, settings: Settings | None = None,
-                 strategies: list[str] | None = None) -> Path:
+                 strategies: list[str] | None = None, jobs: int = 1, progress: bool = False) -> Path:
     settings = settings or load_settings()
-    ev = evaluate_all(store, settings, strategies)
+    ev = evaluate_all(store, settings, strategies, jobs, progress)
     digest = results_hash(ev.results)
     caps = settings.capitals
     vrows = [[v.strategy, _money(v.capital), v.status, v.first_broken_rule or "-",
