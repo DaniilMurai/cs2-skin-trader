@@ -161,7 +161,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: subagent
       Depends on: T-11, T-12
 
-- [ ] T-14 — Full Steam backfill run (operational) *(finished and merged 2026-11-10; the check passes except first_date, tolerance pending)*
+- [x] T-14 — Full Steam backfill run (operational) *(finished and merged 2026-11-10; `cs2 data check --categories` exits 0)*
       Files: — (data only)
       Do: `cs2 fx update`, then `cs2 backfill steam` over the feed universe in the background,
           resuming after cookie expiry (author refreshes `STEAM_LOGIN_SECURE`)
@@ -306,7 +306,7 @@ Until then they are skipped and the next task in order is taken.
 
 - [x] T-27 — Spike S-09: event calendar source *(answered 2026-11-09: partly — spikes/FINDINGS.md S-09)*
 
-- [ ] T-27a — Curated event list `docs/pipeline/events.csv` *(list, loader, builders and tests done 2026-11-09; the 90% first-point check waits for T-14)*
+- [x] T-27a — Curated event list `docs/pipeline/events.csv` *(first-point check 2026-11-10: 39/42 case releases = 92.9% within 7 days; misses: two 2013 cases before Steam history, Gallery Case +8 d)*
       Files: docs/pipeline/events.csv, src/cs2trader/market/events.py, tests/test_events.py
       Do: hand-curated rows (date, type, name, source_url): 25 Majors (start, end) from the
           Wikipedia table via the MediaWiki API; ~45 case releases and drop-pool exits

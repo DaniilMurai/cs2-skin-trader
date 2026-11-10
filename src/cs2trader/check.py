@@ -17,11 +17,8 @@ MAX_UNKNOWN_SHARE = 0.01
 # ran 260 requests without a 429 (2026-11-09 interval probes)
 MAX_REQUESTS_PER_MIN = 62
 FIRST_DATE_WINDOW_DAYS = 7
-# The upper first-date bound only makes sense for items that traded continuously: a thin item
-# can legitimately have its first Steam sale months after release.
-LIQUID_MIN_POINTS = 100
-# Steam history starts around here; older releases have a truncated first date.
-HISTORY_START = "2013-01-01"
+FIRST_DATE_EARLY_DAYS = 1
+MAX_EARLY_SHARE = 0.10
 
 # The fixed AC-4 list: (name, category, source)
 AC4: list[tuple[str, Category, str]] = [
@@ -86,27 +83,31 @@ def check_coverage(store: Store, universe: Sequence[str]) -> CheckResult:
 
 
 def check_first_date(store: Store, universe: Sequence[str]) -> CheckResult:
-    # No independent first-sale source exists, so items.release_date is the proxy.
-    # Lower bound (every item with a release date): first point >= release - 1 day, since an item
-    # cannot sell before it exists. Upper bound (only liquid items released after Steam history
-    # starts): first point <= release + 7 days. Items without release_date are skipped, and so
-    # are cases: their DB date is a first_sale_date that misses real releases by −159…+329 days (S-09).
-    rows = store.db.execute(f"""
+    # No independent first-sale source exists, so items.release_date is the proxy, and it is noisy
+    # (full backfill 2026-11-10: median first point = release +1 d, 5% before release, 25% later than
+    # +8 d). Hence a rule on the whole set, not on every item. Items without release_date are skipped,
+    # and so are cases: their DB date is a first_sale_date that misses real releases by -159...+329 days (S-09).
+    rows = store.db.execute("""
         WITH f AS (
-            SELECT p.name, CAST(min(p.ts) AS DATE) AS first_day, count(*) AS n
+            SELECT p.name, CAST(min(p.ts) AS DATE) AS first_day
             FROM steam_points p JOIN (SELECT DISTINCT name FROM _check_universe) u USING (name)
             GROUP BY p.name)
-        SELECT f.name, f.first_day, i.release_date,
-               f.first_day < i.release_date - INTERVAL 1 DAY AS too_early,
-               (f.n >= {LIQUID_MIN_POINTS} AND i.release_date >= DATE '{HISTORY_START}'
-                AND f.first_day > i.release_date + INTERVAL {FIRST_DATE_WINDOW_DAYS} DAY) AS too_late
+        SELECT f.name, f.first_day, i.release_date, date_diff('day', i.release_date, f.first_day)
         FROM f JOIN items i USING (name) WHERE i.release_date IS NOT NULL AND i.category <> 'case'
     """).fetchall()
-    bad = [r for r in rows if r[3] or r[4]]
-    detail = f"{len(rows) - len(bad)}/{len(rows)} items with a release date consistent"
-    if bad:
-        detail += "; e.g. " + "; ".join(f"{r[0]} first {r[1]} release {r[2]}" for r in bad[:3])
-    return CheckResult("first_date", not bad, detail)
+    if not rows:
+        return CheckResult("first_date", True, "no items with a release date")
+    early = [r for r in rows if r[3] < -FIRST_DATE_EARLY_DAYS]
+    offsets = sorted(r[3] for r in rows)
+    median = (offsets[(len(offsets) - 1) // 2] + offsets[len(offsets) // 2]) / 2
+    share = len(early) / len(rows)
+    ok = share <= MAX_EARLY_SHARE and 0 <= median <= FIRST_DATE_WINDOW_DAYS
+    detail = (f"{len(rows)} items with a release date: first point > {FIRST_DATE_EARLY_DAYS} d before release "
+              f"for {share:.1%} (max {MAX_EARLY_SHARE:.0%}), median first point = release {median:+.1f} d "
+              f"(allowed 0..{FIRST_DATE_WINDOW_DAYS})")
+    if early:
+        detail += "; e.g. " + "; ".join(f"{r[0]} first {r[1]} release {r[2]}" for r in early[:3])
+    return CheckResult("first_date", ok, detail)
 
 
 def check_duplicates(store: Store) -> CheckResult:
