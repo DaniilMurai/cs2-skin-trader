@@ -532,3 +532,11 @@ class DataCheckFailed(Cs2Error): ...       # `cs2 data check` found a failing ch
 - **Cost schedule**: one entry for all history (today's 7-day lock and fees); the brief's
   "date-dependent cost model" keeps the shape (`tuple[CostModel, ...]`) but no historical rules
   are known → draft decision.
+
+## Cloudflare buffer (added 2026-11-11, after spike S-10)
+- Worker `ops/cloudflare/worker.js` stores raw asks/bids JSON as `raw/<kind>/day=YYYY-MM-DD/<ISO with - for : .>.json`
+  in R2; routes `/status`, `/list`, `/get?key=`, `POST /delete`, `POST /run`, all behind header `X-CS2-Token`.
+- `Snapshot.host` may be `"cf"` (the import's host); `fetched_at` comes from the object key, `feed_time` from the feed.
+  When two hosts hold the same `feed_time` the view keeps one row, ordered by host name.
+- `.env` gains `CF_WORKER_URL` and `CF_WORKER_TOKEN`; `cs2 collect pull [--cf-only]` imports and then deletes the
+  raw files (`cs2trader.sources.cloudflare.import_raw`). An unparseable file is saved under `data/quarantine/cf/`.

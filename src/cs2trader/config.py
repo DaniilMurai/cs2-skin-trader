@@ -9,7 +9,7 @@ from typing import Any, Literal
 from cs2trader.errors import ConfigError
 from cs2trader.models import CostModel
 
-SecretName = Literal["STEAM_LOGIN_SECURE", "MARKETCSGO_API_KEY"]
+SecretName = Literal["STEAM_LOGIN_SECURE", "MARKETCSGO_API_KEY", "CF_WORKER_URL", "CF_WORKER_TOKEN"]
 
 
 def _read_dotenv(path: Path) -> dict[str, str]:
@@ -22,6 +22,10 @@ def _read_dotenv(path: Path) -> dict[str, str]:
             key, value = line.split("=", 1)
             out[key.strip()] = value.strip().strip('"').strip("'")
     return out
+
+
+def optional_secret(name: SecretName) -> str | None:
+    return os.environ.get(name) or _read_dotenv(Path(".env")).get(name) or None
 
 
 def require_secret(name: SecretName) -> str:

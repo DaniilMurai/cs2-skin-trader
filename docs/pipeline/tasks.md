@@ -500,3 +500,11 @@ request and never keeps the file open; anything that writes runs as a subprocess
       DoD: tests/test_ui.py green; the author finds the pages understandable (to be confirmed)
       Executor: subagent
       Depends on: T-41
+
+## I. Cloudflare buffer (added 2026-11-11)
+
+- [x] T-44 — Worker with quota guard *(ops/cloudflare/worker.js; `node --test` 6 tests; deployed 2026-11-11, 13 runs ok, delay 0 s)*
+- [x] T-45 — Importer `cs2trader.sources.cloudflare` + `cs2 collect pull --cf-only` *(tests/test_cloudflare.py, 5 tests)*
+- [ ] T-46 — Switch on: rotate the token, add `CF_WORKER_URL`/`CF_WORKER_TOKEN` to `.env`, run `ops/install-launchd.sh`
+      DoD: after two hours `cs2 collect status` counts `cf` snapshots and `/status` shows `used_bytes` falling after an import
+      Executor: author (secrets), main loop (check)

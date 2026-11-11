@@ -50,3 +50,13 @@
 | Verdict cards show all five checks; the official first broken rule always wins | show only the first failure | More informative; the note says the official verdict stops at the first |
 | "Report out of date" is a heuristic (no `verdicts.json`, hash mismatch, or newer price data); it does not detect changed settings | track settings in the report | Cheap; may be improved later |
 | "None hold up" is shown in neutral grey, not red | red | It is a valid research result, not an error |
+
+## 2026-11-11 — Cloudflare Worker as the hourly price-feed collector (author's choice after spike S-10)
+
+| Decision | Alternatives | Why |
+|---|---|---|
+| A Worker (cron :07) buffers the raw asks/bids feeds in R2; the Mac imports and deletes them | GitHub Actions only; Mac only; paid Worker with gzip | GitHub fires every 4–9 h, the Mac sleeps; Worker cron was on time (delay 0 s in 13 runs) and market.csgo answers Cloudflare (HTTP 200). The author has no budget, so the free plan: raw files, 7–13 ms CPU, borderline against the 10 ms limit |
+| The Worker stops adding files at 80 % of R2's free 10 GB (8 GB) | stop at 100 % | The author's request; leaves headroom so a late import can still be stored |
+| Sales polling stays on the Mac | polling in the Worker | Free plan allows 50 outgoing requests per run, polling needs ~240 |
+| The token travels in a header, not the URL; routes limited to `raw/` | query token | URLs show up in logs (the earlier `wrangler tail` printed it) |
+| GitHub collector stays as a backup for now | remove it | Cheap redundancy; revisit after a week of Worker data |

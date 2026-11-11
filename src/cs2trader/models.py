@@ -85,7 +85,7 @@ class Snapshot:
     kind: Literal["asks", "bids"]
     feed_time: datetime
     fetched_at: datetime
-    host: Literal["gha", "mac"]
+    host: Literal["gha", "mac", "cf"]
     rows: list[AskRow] | list[BidRow]
 
 

@@ -6,15 +6,9 @@
     <string>com.cs2trader.collect</string>
     <key>ProgramArguments</key>
     <array>
-        <string>@UV@</string>
-        <string>run</string>
-        <string>cs2</string>
-        <string>collect</string>
-        <string>run</string>
-        <string>--kinds</string>
-        <string>asks,bids</string>
-        <string>--host</string>
-        <string>mac</string>
+        <string>/bin/sh</string>
+        <string>-c</string>
+        <string>@UV@ run cs2 collect run --kinds asks,bids --host mac; @UV@ run cs2 collect pull --cf-only</string>
     </array>
     <key>WorkingDirectory</key>
     <string>@REPO@</string>

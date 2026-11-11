@@ -19,7 +19,7 @@ from cs2trader.collect import (
     run_collect,
     worst_error,
 )
-from cs2trader.config import load_settings, require_secret
+from cs2trader.config import load_settings, optional_secret, require_secret
 from cs2trader.errors import ConfigError, Cs2Error, SteamAuthError
 from cs2trader.evaluate import make_spec
 from cs2trader.items import update_items
@@ -166,7 +166,14 @@ def cmd_collect_status(args: argparse.Namespace) -> None:
 
 def cmd_collect_pull(args: argparse.Namespace) -> None:
     settings = load_settings()
-    print(f"pull: {pull_remote(Store(settings.data_dir, in_memory=True), settings.mc.data_repo)} files added")
+    store = Store(settings.data_dir, in_memory=True)
+    if not args.cf_only:
+        print(f"pull: {pull_remote(store, settings.mc.data_repo)} files added")
+    url, token = optional_secret("CF_WORKER_URL"), optional_secret("CF_WORKER_TOKEN")
+    if url and token:
+        from cs2trader.sources.cloudflare import CfBuffer, import_raw
+        rep = import_raw(store, CfBuffer(url, token), settings.data_dir / "quarantine" / "cf")
+        print(f"cloudflare: {rep.imported} files imported, {rep.bad} unparseable (quarantined), {rep.deleted} removed from R2")
 
 
 def cmd_collect_run(args: argparse.Namespace) -> None:
@@ -220,7 +227,9 @@ def main() -> None:
     cr.add_argument("--host", choices=["gha", "mac"], required=True)
     cr.add_argument("--sales-max", type=int, help="override mc.sales_max_names_per_run")
     cr.set_defaults(func=cmd_collect_run)
-    co.add_parser("pull").set_defaults(func=cmd_collect_pull)
+    cp = co.add_parser("pull")
+    cp.add_argument("--cf-only", action="store_true", help="skip the git data repo, import only the Cloudflare buffer")
+    cp.set_defaults(func=cmd_collect_pull)
     cs = co.add_parser("status")
     cs.add_argument("--hours", type=int, default=48)
     cs.set_defaults(func=cmd_collect_status)

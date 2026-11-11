@@ -1,0 +1,15 @@
+name = "cs2-collector-spike"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+
+[triggers]
+# :07 so the runs are independent of the Mac (:47) and GitHub (:17)
+crons = ["7 * * * *"]
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "cs2-collector-spike"
+
+[vars]
+# Stop adding raw files at 80 % of R2's free 10 GB; the Mac's import (`cs2 collect pull`) frees space
+MAX_BYTES = "8000000000"
