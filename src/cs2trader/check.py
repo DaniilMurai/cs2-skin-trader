@@ -96,6 +96,9 @@ def check_first_date(store: Store, universe: Sequence[str]) -> CheckResult:
         FROM f JOIN items i USING (name) WHERE i.release_date IS NOT NULL AND i.category <> 'case'
     """).fetchall()
     if not rows:
+        # An empty items table means `cs2 items update` has not run; passing would hide that.
+        if universe and store.db.execute("SELECT count(*) FROM items").fetchone()[0] == 0:
+            return CheckResult("first_date", False, "items table is empty: run `cs2 items update` first")
         return CheckResult("first_date", True, "no items with a release date")
     early = [r for r in rows if r[3] < -FIRST_DATE_EARLY_DAYS]
     offsets = sorted(r[3] for r in rows)

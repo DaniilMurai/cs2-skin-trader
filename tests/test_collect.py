@@ -7,7 +7,7 @@ import pytest
 
 from cs2trader import cli
 from cs2trader.collect import collect_once, run_collect, worst_error
-from cs2trader.config import Settings, load_settings
+from cs2trader.config import load_settings
 from cs2trader.errors import ConfigError, SchemaError, SourceUnavailable
 from cs2trader.sources.marketcsgo import MarketCsgoKeyed, MarketCsgoPublic
 from cs2trader.store import Store

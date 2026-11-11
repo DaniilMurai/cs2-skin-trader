@@ -4,6 +4,7 @@ import sys
 from datetime import date
 
 import pytest
+from test_lookahead import FakeStore, synthetic_bars
 
 from cs2trader.backtest.engine import run
 from cs2trader.backtest.runs import load_spec, save_run
@@ -11,7 +12,6 @@ from cs2trader.cli import parse_params
 from cs2trader.config import load_settings
 from cs2trader.errors import ConfigError
 from cs2trader.models import CostModel, FillModel, RunSpec
-from test_lookahead import FakeStore, synthetic_bars
 
 
 def _spec() -> RunSpec:

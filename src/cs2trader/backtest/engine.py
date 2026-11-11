@@ -10,8 +10,8 @@ import polars as pl
 
 from cs2trader.backtest.view import BarMarket, MarketData
 from cs2trader.config import Settings, load_settings
-from cs2trader.market.events import events_hash
 from cs2trader.errors import Cs2Error, InvariantViolation
+from cs2trader.market.events import events_hash
 from cs2trader.models import (
     CostModel,
     EquityPoint,

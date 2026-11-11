@@ -10,13 +10,11 @@ from pathlib import Path
 
 import polars as pl
 
-from cs2trader.backtest.engine import WARMUP_DAYS, load_market, run
+from cs2trader.backtest.engine import WARMUP_DAYS, load_market
 from cs2trader.config import Settings, load_settings
 from cs2trader.evaluate import (
     WalkForwardResult,
-    folds,
     holdout_spec,
-    make_spec,
     metrics,
     walk_forward,
 )

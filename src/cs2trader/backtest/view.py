@@ -62,7 +62,7 @@ class MarketData:
         (directory / "market.pkl").write_bytes(pickle.dumps((small, sizes)))
 
     @classmethod
-    def attach(cls, directory: Path) -> "MarketData":
+    def attach(cls, directory: Path) -> MarketData:
         small, sizes = pickle.loads((directory / "market.pkl").read_bytes())
         self = cls.__new__(cls)
         self.__dict__.update(small)

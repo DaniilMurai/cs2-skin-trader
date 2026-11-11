@@ -34,8 +34,9 @@ class StrategyEntry:
 SPEC_BH = (
     "On the first decision day with a non-empty target set, take the point-in-time universe{scope}. "
     "Estimate each item's fill price as its latest price in the last 7 days x (1 + spread 3%) x "
-    "(1 + safety margin 2%). Split capital equally; an item dearer than its equal share is skipped and "
-    "the capital re-split across the rest, repeated until every kept item is affordable. Target "
+    "(1 + safety margin 2%). Hold an equal-dollar basket of up to 25 items: the largest "
+    "n <= 25 for which at least n items cost no more than budget / n; the n are picked by a stable hash "
+    "of the item name. Target "
     "quantity = floor(share / estimated price). Orders fill on the next bar and the volume cap "
     "cancels the rest, so for the following 10 decision days the still-missing target quantities are "
     "re-ordered (limited by cash at the estimated price). Never sells; after the retry window the "

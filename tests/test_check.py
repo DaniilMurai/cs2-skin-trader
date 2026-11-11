@@ -1,12 +1,12 @@
 import json
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
 
 from cs2trader.check import format_results, raise_if_failed, run_checks
 from cs2trader.errors import DataCheckFailed
-from cs2trader.models import FxRate, ItemInfo, SteamPoint
+from cs2trader.models import FxRate, SteamPoint
 from cs2trader.sources.items_db import classify
 from cs2trader.store import Store
 
@@ -137,3 +137,9 @@ def test_raise_if_failed(tmp_path):
     with pytest.raises(DataCheckFailed) as e:
         raise_if_failed(run_checks(store, UNIVERSE, None, False))
     assert e.value.exit_code == 6 and "fx" in str(e.value)
+
+
+def test_first_date_fails_when_items_were_never_loaded(tmp_path):
+    store = good_store(tmp_path)
+    store.db.execute("DELETE FROM items")
+    assert not run(store)["first_date"].ok

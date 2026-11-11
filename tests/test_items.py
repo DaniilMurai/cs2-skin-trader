@@ -3,7 +3,6 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 
 import httpx
-import polars as pl
 import pytest
 
 from cs2trader.check import AC4

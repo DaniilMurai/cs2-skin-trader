@@ -239,7 +239,7 @@ class Store:
 # cs2trader/collect.py
 def collect_once(store: Store, kinds: Sequence[Literal["asks", "bids", "sales"]],
                  host: Literal["gha", "mac"], now: datetime) -> CollectReport: ...
-def sales_due(store: Store, now: datetime) -> list[str]: ...  # tiered by observed sales/day
+def sales_due(store: Store, now: datetime, s: McSettings) -> list[str]: ...  # tiered by observed sales/day; last poll = max(sales.fetched_at, sales_polls.polled_at)
 def collect_status(store: Store, window_h: int = 48, now: datetime | None = None) -> CollectStatus: ...  # AC-3
 def format_status(status: CollectStatus) -> str: ...
 def pull_remote(store: Store, repo_url: str) -> int: ...  # git clone/pull of `mc.data_repo` into data/collector; files added
@@ -372,7 +372,7 @@ DuckDB tables (identity key in **bold**; writes are upserts on it):
 | `fx_rates` | day, base, per_usd, source, filled | **(day, base)** |
 | `items` | ItemInfo fields, first_seen (date) | **name** |
 | `regimes` | t, index_level, regime | **t** |
-| `variants_tried` | strategy, params_json, fold, run_id | **(strategy, params_json, fold)** — n for Sharpe deflation |
+| `variants_tried` | strategy, params_json, fold, capital, run_id | **(strategy, params_json, fold, capital)** — n for Sharpe deflation |
 
 Views over Parquet: `asks`, `bids` (dedup on **(feed_time, name)**: GHA and the Mac may record
 the same feed state; same `feed_time` = same file content), `sales` (dedup on
@@ -384,9 +384,18 @@ volume-weighted mean price, summed volume).
 **Steam USD conversion (S-08).** `price_usd = price_raw / fx_per_usd` where `fx_per_usd` is the
 NBU rate on the **fetch day**, the same for the whole item. Not the point's own day.
 
-**Data version.** `data_version = sha256(max(steam_fetch_log.fetched_at), row counts of every
-table/view, max feed_time per kind)[:16]`. Same data → same version → same `run_id` (AC-13).
+**Data version.** `data_version = sha256` over `count(*)` and an XOR of row hashes of `steam_points`,
+`items`, `fx_rates` and `regimes` (content, not row counts: re-categorising items or rescaling prices
+changes it; collector snapshots do not). `Store.snapshot_version()` = latest `feed_time` per snapshot
+kind, for hourly (forward) runs. Same data → same version → same `run_id` (AC-13). `run_id` also hashes
+the universe and regime settings and the `events.csv` content.
 
+**Known drift from the code (audit 2026-11-11).** `steam_fetch_log.http_status` is reserved and always
+NULL. `regimes` has an extra `ret` column. `FillModel.ratio` is a `Mapping[str, float]`.
+`RunResult.cashout_available` may be None (no sale); `equity_cash` ignores the 8-day cash-out hold, which
+`cashout_available` reports separately. `RateLimited` is not raised: a 429 after a success is handled as
+throttling inside `SteamClient`. The participation cap is per item and day, across all orders of that day.
+Steam daily bars are price-capped to 5x the median of the item's previous 7 bars (`cap_price_jumps`).
 **Remote data store for the GHA collector** (decided by the author 2026-11-09): a separate
 private repo `cs2-skin-data`; the workflow pushes Parquet files to it (same tree as
 `data/collector/`); `cs2 collect pull` = `git pull` of that repo into `data/collector/`.

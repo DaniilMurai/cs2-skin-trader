@@ -18,7 +18,7 @@ def put(store, hours_ago, n=10, asks=True, bids=True, minute=5):
 
 def test_hole_and_low_share(tmp_path):
     s = Store(tmp_path)
-    for h in range(0, 10):
+    for h in range(10):
         if h not in (4, 5, 6):
             put(s, h, n=7 if h == 8 else 10)
     st = collect_status(s, window_h=10, now=NOW)

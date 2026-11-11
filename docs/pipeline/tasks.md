@@ -93,7 +93,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: subagent
       Depends on: T-06
 
-- [x] T-08 — GitHub Actions hourly collector + `cs2 collect pull` *(first run 2026-11-09 20:10 UTC green: 27,230 asks, 26,132 bids, 459,621 sales rows pushed to cs2-skin-data; the second scheduled run is still to be seen)*
+- [ ] T-08 — GitHub Actions hourly collector + `cs2 collect pull` *(first run 2026-11-09 20:10 UTC green: 27,230 asks, 26,132 bids, 459,621 sales rows pushed to cs2-skin-data; reopened by the 2026-11-11 audit: only 6 scheduled runs in 39 h and `collect pull` never ran locally; DoD needs hourly scheduled runs green and `cs2 collect pull` adding files)*
       Files: .github/workflows/collect.yml, src/cs2trader/collect.py, src/cs2trader/cli.py
       Do: hourly cron workflow: `uv sync`, `cs2 collect run --host gha`, push new Parquet
           files to the private repo `cs2-skin-data` with `DATA_REPO_TOKEN`; `cs2 collect pull`
@@ -241,9 +241,10 @@ Until then they are skipped and the next task in order is taken.
 - [x] T-21 — Benchmarks: cash, bh_universe, bh_knives_gloves
       Files: src/cs2trader/strategies/benchmarks.py, src/cs2trader/strategies/registry.py,
              tests/test_benchmarks.py
-      Do: buy-and-hold sizing (author, 2026-11-09): an item dearer than its equal share is
-          skipped and the capital re-split across the affordable ones, repeated until every
-          kept item is affordable; spec_md for each
+      Do: buy-and-hold sizing: a fixed-size equal-dollar basket (≤ 25 items) of items cheaper
+          than their share, picked by a stable name hash (changed 2026-11-11 after the audit: the
+          first "skip the dear ones and re-split" rule emptied the basket on thousands of real
+          items); spec_md for each
       DoD: `uv run pytest tests/test_benchmarks.py` green: cash equity is flat; with $100 and
            one $1,800 item in the universe, bh_universe skips it and spends ≥ 95% of capital
            on the rest; all three

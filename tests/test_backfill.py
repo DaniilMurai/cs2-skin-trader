@@ -8,7 +8,7 @@ import pytest
 from cs2trader.backfill import backfill
 from cs2trader.errors import SourceUnavailable, SteamAuthError
 from cs2trader.models import FxRate, SteamPoint
-from cs2trader.sources.steam import SteamClient, EmptyHistory
+from cs2trader.sources.steam import EmptyHistory, SteamClient
 from cs2trader.store import Store
 
 FX = FxRate(date(2026, 11, 9), "UAH", 41.5, "nbu", False)
