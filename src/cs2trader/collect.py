@@ -211,7 +211,8 @@ def collect_status(store: Store, window_h: int = 48, now: datetime | None = None
 
 
 def format_status(status: CollectStatus) -> str:
-    ok = "ok" if status.snapshots >= 44 * status.window_h // 48 else "below target"
+    enough = status.snapshots >= 44 * status.window_h // 48
+    ok = "below target" if not enough else ("ok" if not status.low_share else "ok, but some hours have low item share")
     lines = [
         f"snapshots: {status.snapshots} in last {status.window_h} h ({ok}; AC-3 needs >= 44 per 48 h)",
         f"min item share: {status.min_item_share:.1%} (flag below 90%)",

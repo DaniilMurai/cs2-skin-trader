@@ -95,3 +95,10 @@ def test_equal_split_single_dear_item_for_small_budget():
     from cs2trader.strategies.benchmarks import equal_split
     assert equal_split({"knife": 90.0, "other knife": 300.0}, 100.0) == {"knife": 1}
     assert equal_split({"knife": 300.0}, 100.0) == {}
+
+
+def test_window_without_bars_is_a_clear_error():
+    from cs2trader.errors import Cs2Error
+    spec = RunSpec("cash", {}, 100.0, date(2010, 1, 1), date(2010, 3, 1), fills=FILLS)
+    with pytest.raises(Cs2Error, match="no bars"):
+        run(spec, FakeStore(bars()))

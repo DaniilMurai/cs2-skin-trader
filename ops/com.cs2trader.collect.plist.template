@@ -6,7 +6,7 @@
     <string>com.cs2trader.collect</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/opt/homebrew/bin/uv</string>
+        <string>@UV@</string>
         <string>run</string>
         <string>cs2</string>
         <string>collect</string>
@@ -17,7 +17,7 @@
         <string>mac</string>
     </array>
     <key>WorkingDirectory</key>
-    <string>/Users/daniilmurai/PycharmProjects/cs2-skin-trader</string>
+    <string>@REPO@</string>
     <!-- StartCalendarInterval, unlike StartInterval, fires a missed run once after wake. -->
     <key>StartCalendarInterval</key>
     <dict>
@@ -25,8 +25,8 @@
         <integer>47</integer>
     </dict>
     <key>StandardOutPath</key>
-    <string>/Users/daniilmurai/PycharmProjects/cs2-skin-trader/data/logs/collect-mac.log</string>
+    <string>@REPO@/data/logs/collect-mac.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/daniilmurai/PycharmProjects/cs2-skin-trader/data/logs/collect-mac.log</string>
+    <string>@REPO@/data/logs/collect-mac.log</string>
 </dict>
 </plist>

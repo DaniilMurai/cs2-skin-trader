@@ -17,14 +17,12 @@ Locally, `uv run cs2 collect pull` clones or pulls `cs2-skin-data` into `data/co
 
 ## Mac launchd (gap filler)
 
-Runs `cs2 collect run --kinds asks,bids --host mac` at :47 every hour; a run missed during sleep
+The plist is rendered from `com.cs2trader.collect.plist.template` (repo path and `uv` location are
+filled in at install time, so no personal paths are committed). Runs `cs2 collect run --kinds asks,bids --host mac` at :47 every hour; a run missed during sleep
 fires once after wake. Logs: `data/logs/collect-mac.log`.
 
 ```bash
-mkdir -p data/logs
-cp ops/com.cs2trader.collect.plist ~/Library/LaunchAgents/
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.cs2trader.collect.plist
-launchctl print gui/$(id -u)/com.cs2trader.collect | head -20
+ops/install-launchd.sh
 ```
 
 Remove:

@@ -10,7 +10,8 @@ import polars as pl
 
 from cs2trader.backtest.view import BarMarket, MarketData
 from cs2trader.config import Settings, load_settings
-from cs2trader.errors import InvariantViolation
+from cs2trader.market.events import events_hash
+from cs2trader.errors import Cs2Error, InvariantViolation
 from cs2trader.models import (
     CostModel,
     EquityPoint,
@@ -166,6 +167,8 @@ def run(spec: RunSpec, store: Store, settings: Settings | None = None,
     if data is None:
         data = load_market(store, spec.start, spec.end, settings)
     days = [d for d in data.days if spec.start <= d <= spec.end]
+    if not days:
+        raise Cs2Error(f"no bars between {spec.start} and {spec.end}: nothing to run on")
     book = Book(spec.capital)
     last: dict[str, Mapping[str, Any]] = {}
     trades: list[Fill] = []
@@ -191,7 +194,7 @@ def run(spec: RunSpec, store: Store, settings: Settings | None = None,
     data_version = store.data_version()
     spec_json = json.dumps(asdict(spec), default=str, sort_keys=True)
     # Universe and regime settings change what strategies see, so they are part of the run identity.
-    view_json = json.dumps([asdict(settings.universe), asdict(settings.regimes)], sort_keys=True)
+    view_json = json.dumps([asdict(settings.universe), asdict(settings.regimes), events_hash()], sort_keys=True)
     run_id = hashlib.sha256((spec_json + view_json + data_version).encode()).hexdigest()[:16]
     return RunResult(
         run_id, spec, data_version,

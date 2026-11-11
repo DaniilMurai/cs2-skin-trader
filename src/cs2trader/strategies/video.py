@@ -110,8 +110,8 @@ growth > 0 are selected ("unknown" and "other" never are). Exposure grows with t
 rise — "buy more actively while they rise": invested share = min(1, growth / `full_growth`) for
 each selected category, applied to its 1/`top_k` share of equity. Inside a category, the
 `items_per_cat` universe items with the highest own `window`-day return are held in equal
-dollar amounts. Held items outside the new target are sold as soon as their lock allows; between
-rebalances nothing is traded.
+dollar amounts. The target is fixed until the next rebalance; every bar the book is moved toward it
+(unfilled buys are retried, held items outside the target are sold as soon as their lock allows).
 """
 
 V2_GRID = {

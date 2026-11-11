@@ -1,9 +1,24 @@
+import hashlib
 from pathlib import Path
 
 import polars as pl
 
-EVENTS_CSV = Path(__file__).resolve().parents[3] / "docs" / "pipeline" / "events.csv"
+_REL = Path("docs") / "pipeline" / "events.csv"
+
+
+def _locate() -> Path:
+    # A non-editable install has no repo next to the package; the working directory is the repo root there.
+    if (Path.cwd() / _REL).exists():
+        return Path.cwd() / _REL
+    return Path(__file__).resolve().parents[3] / _REL
+
+
+EVENTS_CSV = _locate()
 TYPES = ("major_start", "major_end", "case_release", "case_to_rare_pool", "case_discontinued", "update")
+
+
+def events_hash(path: Path = EVENTS_CSV) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()[:16] if path.exists() else "none"
 
 
 def load_events(path: Path = EVENTS_CSV) -> pl.DataFrame:
