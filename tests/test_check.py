@@ -143,3 +143,10 @@ def test_first_date_fails_when_items_were_never_loaded(tmp_path):
     store = good_store(tmp_path)
     store.db.execute("DELETE FROM items")
     assert not run(store)["first_date"].ok
+
+
+def test_request_log_with_a_429_fails(tmp_path):
+    store = good_store(tmp_path)
+    log = write_log(tmp_path / "ok.tsv", 200, 1.0)
+    log.write_text(log.read_text() + "2026-11-10T00:00:00+00:00\t429\n")
+    assert not run(store, log)["request_rate"].ok

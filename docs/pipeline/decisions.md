@@ -23,3 +23,10 @@
 - **AC-5**: the 30-calendar-day regime label calls only 2025-10-24 `falling` in the crash week 2025-10-22…28. The median item fell ≈ −18 % on 10-23/24 and recovered within days, so a 30-day lookback can't label it; a 7-day lookback would label 10-23…28 (not 10-22: the drop is not in the data yet). Changing the lookback to fit this week is tuning on the example, so it was not done.
 - **Index drift**: the chain-linked median of daily returns diverges from the median item ratio in thin early years (2013-14). Kept; treat pre-2018 regime labels as unreliable.
 - **T-08**: reopened — GitHub's scheduled runs fire every 4–9 h, not hourly; the Mac job is the real hourly source (AC-3).
+
+## 2026-11-11 — author's go on AC-1 and AC-5
+
+| Decision | Alternatives | Why |
+|---|---|---|
+| AC-1 rewritten: zero HTTP 429 and a peak ≤ 62 requests per 60 s; first dates by the share rule (≤ 10 % early, median 0…7 d), per-item rule dropped. `cs2 data check` now fails on any 429 | keep 24/min; keep the per-item rule | 27,236 requests at ~1 s gave 0 × 429 (199 × 500 = unknown names, 2 × 502, 9 × 0); no independent first-sale source exists, and the DB release date fails 40 % of items |
+| AC-5: crash week is an observation, regime lookback stays 30 days | switch to 7 or 14 days to label 2025-10-23…28 `falling` | `events.csv` has no dated market-wide shocks before 2025-10 (cases, Majors, one update), so an out-of-sample event test was not possible. Without the crash week, fewest label flips/yr favours 30 d (22.7 vs 24.0 for 7 d and 29.9 for 14 d); label shares 2019-01…2025-09: 30 d falling 16.9 / flat 49.9 / rising 33.2 %, 7 d 8.2 / 83.2 / 8.6 %, 14 d 13.3 / 63.0 / 23.6 %. 7 d and 14 d label 10-23…28 `falling` (10-22 is `flat` at both: the drop is not in the data yet). V2/trend read the same index, so switching would change their behaviour |

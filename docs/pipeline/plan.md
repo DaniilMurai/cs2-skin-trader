@@ -29,12 +29,20 @@ decline. Nothing in the holdout is used to choose rules or parameters.
 
 AC-1: Given — the universe list and a valid `STEAM_LOGIN_SECURE` in `.env`.
       When — `cs2 backfill steam` runs to completion (resumable after interruption).
-      Then — `cs2 data check` reports ≥ 95% of universe items with history; each item's
-      first date is within 7 days of its first Steam sale date; no item has duplicate
-      dates; the run log shows no request rate above 62 requests/min (amended 2026-11-10 from 24: the 24 was the pace tried in S-01, 1.0 s/request ran clean);
-      every stored price has both the raw wallet-currency value (UAH) and a USD value
-      = raw / the NBU UAH→USD rate on the item's fetch day (Steam converts the whole
-      history at one current rate, spike S-08), and no item lacks a rate.
+      Then — `cs2 data check` reports ≥ 95% of universe items with history; no item has
+      duplicate dates; the request log shows no HTTP 429 and a peak of at most 62 requests in
+      any 60 s; every stored price has both the raw wallet-currency value (UAH) and a USD value
+      = raw / the NBU UAH→USD rate on the item's fetch day (Steam converts the whole history at
+      one current rate, spike S-08), and no item lacks a rate; first dates: of the items with a
+      DB release date (cases excluded), at most 10% have a first Steam point more than 1 day
+      before it, and the median first point lies 0…7 days after it.
+      Amended 2026-11-11 (both changes were made after the backfill, to fit its result; accepted
+      by the author with these reasons): (1) the rate limit was 24/min, only the pace tried in
+      spike S-01; the real evidence of a safe pace is zero HTTP 429 in 27,236 requests at ~1 s
+      per request, so zero 429 is now part of the criterion; (2) "each item's first date within
+      7 days of its first Steam sale date" cannot be checked, since no independent first-sale
+      source exists and the DB release date fails it for 40% of items; the share rule above is
+      the strongest check available.
 
 AC-2: Given — the backfill was interrupted (process killed) halfway.
       When — `cs2 backfill steam` is run again.
@@ -56,10 +64,18 @@ AC-4: Given — the stored universe.
 
 AC-5: Given — the Steam history.
       When — `cs2 regimes` runs.
-      Then — every day from the first index day to the last has exactly one regime label,
-      and the week of the October 2025 trade-up crash is labelled `falling`; labels for
-      all days ≤ t are identical when data after t is deleted (a test truncates the data
-      at a random t).
+      Then — every day from the first index day to the last has exactly one regime label;
+      labels for all days ≤ t are identical when data after t is deleted (a test truncates the
+      data at a random t); on a synthetic crash and rally the labels are `falling` after the
+      crash and `rising` after the rally (tests/test_regimes.py). On real data the command prints
+      the label shares, the flips per year and the latest label runs, and the week of the
+      October 2025 trade-up crash is reported as an observation, not a pass/fail.
+      Amended 2026-11-11: the crash-week pass/fail was dropped. A causal label cannot mark the
+      day of the shock, and the median item fell about 18% on 2025-10-23/24 and recovered within
+      days, so the 30-day lookback labels 1 of the 7 days `falling`. Fitting the lookback to that
+      week would be tuning on the example; a lookback picked without it (fewest label flips per
+      year on 2019-01…2025-09: 30 d = 22.7, 7 d = 24.0, 14 d = 29.9) keeps 30 days. 7 and 14 days
+      would label 10-23…28 `falling`; both are recorded in decisions.md as the known alternative.
 
 AC-6: Given — ≥ 14 days of market.csgo snapshots.
       When — `cs2 ratio` runs.

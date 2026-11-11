@@ -127,6 +127,8 @@ def cmd_regimes(args: argparse.Namespace) -> None:
                                         pl.col("regime").first())
     print(f"regimes: {labels.height} days {labels['t'].min()}..{labels['t'].max()}, "
           + ", ".join(f"{r} {n}" for r, n in labels.group_by("regime").len().sort("regime").iter_rows()))
+    years = labels.height / 365
+    print(f"  {runs.height / years:.1f} label changes per year (a 30-day lookback on 2019-2025 data gave 22.7)")
     for row in runs.tail(args.last).iter_rows(named=True):
         print(f"  {row['start']} → {row['end']}  {row['regime']}")
 

@@ -147,16 +147,17 @@ def check_fx(store: Store) -> CheckResult:
 def check_request_rate(request_log: Path | None) -> CheckResult:
     if request_log is None or not request_log.exists():
         return CheckResult("request_rate", True, "no log")
-    times = sorted(
-        datetime.fromisoformat(line.split("\t")[0]).timestamp()
-        for line in request_log.read_text().splitlines() if line.strip())
+    rows = [line.split("\t") for line in request_log.read_text().splitlines() if line.strip()]
+    times = sorted(datetime.fromisoformat(r[0]).timestamp() for r in rows)
+    throttled = sum(1 for r in rows if len(r) > 1 and r[1] == "429")
     peak, lo = 0, 0
     for hi, t in enumerate(times):
         while t - times[lo] >= 60:
             lo += 1
         peak = max(peak, hi - lo + 1)
-    return CheckResult("request_rate", peak <= MAX_REQUESTS_PER_MIN,
-                       f"{len(times)} requests, peak {peak} in 60 s (max {MAX_REQUESTS_PER_MIN})")
+    return CheckResult("request_rate", peak <= MAX_REQUESTS_PER_MIN and throttled == 0,
+                       f"{len(times)} requests, peak {peak} in 60 s (max {MAX_REQUESTS_PER_MIN}), "
+                       f"{throttled} HTTP 429 (max 0)")
 
 
 def check_unknown_share(store: Store) -> CheckResult:

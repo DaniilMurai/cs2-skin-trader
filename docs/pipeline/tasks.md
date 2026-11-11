@@ -187,8 +187,8 @@ Until then they are skipped and the next task in order is taken.
           write it into the function docstring; per-category indices; `label_regimes` by
           `regimes.lookback_days` / `threshold`; store table `regimes`
       DoD: `uv run pytest tests/test_regimes.py` green: random-t truncation gives identical
-           labels ≤ t; on real data every day has one label and 2025-10-22…28 are `falling`
-           (AC-5)
+           labels ≤ t; on real data every day has one label and `cs2 regimes` prints shares, flips
+           per year and the 2025-10-22…28 labels as an observation (AC-5, amended 2026-11-11)
       Executor: main loop
       Depends on: T-14, T-15
 
