@@ -168,3 +168,13 @@ def test_rate_is_looked_up_per_item_so_a_run_can_cross_midnight(tmp_path):
     backfill(store, FakeSource(), NAMES[:2], lambda: next(rates), echo=lambda _: None)
     days = store.db.execute("SELECT name, fx_day FROM steam_points GROUP BY ALL ORDER BY name").fetchall()
     assert days == [(NAMES[0], date(2026, 11, 9)), (NAMES[1], date(2026, 11, 10))]
+
+
+def test_unparseable_body_is_quarantined(tmp_path):
+    from cs2trader.errors import SchemaError
+    body = {"success": True, "price_suffix": "₴", "prices": [["2026-11-09T13:00", 1.0, "1"]]}
+    http = httpx.Client(transport=httpx.MockTransport(lambda req: httpx.Response(200, json=body)))
+    c = SteamClient("cookie", interval_s=0, max_retries=3, client=http, quarantine_dir=tmp_path / "q")
+    with pytest.raises(SchemaError):
+        c.price_history("x")
+    assert len(list((tmp_path / "q").glob("*.json"))) == 1

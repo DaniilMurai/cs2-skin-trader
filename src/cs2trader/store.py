@@ -284,11 +284,24 @@ class Store:
         return cap_price_jumps(bars)
 
     def data_version(self) -> str:
-        parts = [str(self.db.execute("SELECT CAST(max(fetched_at) AS VARCHAR) FROM steam_fetch_log").fetchone()[0])]
-        for table in ("steam_points", "steam_fetch_log", "fx_rates", "items"):
-            parts.append(str(self.db.execute(f"SELECT count(*) FROM {table}").fetchone()[0]))
+        """Fingerprint of the daily-bar inputs by content (an XOR of row hashes per table), so re-categorised
+        items or rescaled prices change it and unrelated collector snapshots do not."""
+        fingerprints = {
+            "steam_points": "hash(name, ts, price_usd, volume)",
+            "items": "hash(name, category, release_date)",
+            "fx_rates": "hash(day, base, per_usd)",
+            "regimes": "hash(t, regime)",
+        }
+        parts = []
+        for table, row_hash in fingerprints.items():
+            n, x = self.db.execute(f"SELECT count(*), bit_xor({row_hash}) FROM {table}").fetchone()
+            parts.append(f"{table}={n}:{x}")
+        return hashlib.sha256("|".join(parts).encode()).hexdigest()[:16]
+
+    def snapshot_version(self) -> str:
+        """Latest feed_time per collector kind: the input of hourly (forward) runs, not of daily bars."""
+        parts = []
         for kind in _VIEW_COLUMNS:
             latest = self.db.execute(f"SELECT CAST(max(feed_time) AS VARCHAR) FROM {kind}").fetchone()[0]
-            if latest is not None:  # absent when no snapshots, so the version of snapshot-free data is unchanged
-                parts.append(f"{kind}={latest}")
+            parts.append(f"{kind}={latest}")
         return hashlib.sha256("|".join(parts).encode()).hexdigest()[:16]

@@ -1,7 +1,9 @@
+import json
 import time
 from collections import Counter
 from collections.abc import Callable
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -27,10 +29,14 @@ def parse_history(name: str, body: dict[str, Any]) -> list[SteamPoint]:
     if currency is None:
         raise SchemaError("steam", f"unexpected price_suffix {body.get('price_suffix')!r}")
     rows = []
-    for stamp, price, volume in body["prices"]:
-        # "Feb 21 2014 01: +0" — the trailing "+0" is the UTC offset
-        ts = datetime.strptime(stamp[:14], "%b %d %Y %H").replace(tzinfo=UTC)
-        rows.append((ts, float(price), int(volume)))
+    for row in body["prices"]:
+        try:
+            stamp, price, volume = row
+            # "Feb 21 2014 01: +0" — the trailing "+0" is the UTC offset
+            ts = datetime.strptime(stamp[:14], "%b %d %Y %H").replace(tzinfo=UTC)
+            rows.append((ts, float(price), int(volume)))
+        except (ValueError, TypeError) as e:
+            raise SchemaError("steam", f"unexpected price row {row!r} for {name!r}: {e}") from e
     per_day = Counter(ts.date() for ts, _, _ in rows)
     return [
         SteamPoint(name, ts, price, currency, volume,
@@ -42,7 +48,9 @@ def parse_history(name: str, body: dict[str, Any]) -> list[SteamPoint]:
 class SteamClient:
     def __init__(self, cookie: str, interval_s: float, max_retries: int, backoff_s: float = 60.0,
                  client: httpx.Client | None = None, sleep: Callable[[float], None] = time.sleep,
-                 on_request: Callable[[datetime, int], None] | None = None) -> None:
+                 on_request: Callable[[datetime, int], None] | None = None,
+                 quarantine_dir: Path | None = None) -> None:
+        self._quarantine_dir = quarantine_dir
         self._cookie = cookie
         self._interval_s = interval_s
         self._max_retries = max_retries
@@ -105,7 +113,14 @@ class SteamClient:
             if body.get("success") and body.get("prices") == [] and market_hash_name != CANARY:
                 self.price_history(CANARY)
                 raise EmptyHistory(market_hash_name)
-            points = parse_history(market_hash_name, body)
+            try:
+                points = parse_history(market_hash_name, body)
+            except SchemaError:
+                if self._quarantine_dir is not None:
+                    self._quarantine_dir.mkdir(parents=True, exist_ok=True)
+                    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
+                    (self._quarantine_dir / f"{stamp}.json").write_text(json.dumps(body), encoding="utf-8")
+                raise
             self._authed = True
             return points
         raise AssertionError("unreachable")

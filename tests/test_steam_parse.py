@@ -27,3 +27,12 @@ def test_unknown_currency_is_schema_error():
 def test_empty_history_is_auth_error():
     with pytest.raises(SteamAuthError):
         parse_history("x", {"success": True, "prices": []})
+
+
+def test_changed_row_format_is_a_schema_error():
+    from cs2trader.errors import SchemaError
+    body = {"success": True, "price_suffix": "₴", "prices": [["2026-11-09T13:00", 1.0, "1"]]}
+    with pytest.raises(SchemaError):
+        parse_history("x", body)
+    with pytest.raises(SchemaError):
+        parse_history("x", {"success": True, "price_suffix": "₴", "prices": [["Feb 21 2014 01: +0", 1.0]]})

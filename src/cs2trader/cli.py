@@ -21,10 +21,10 @@ from cs2trader.collect import (
 )
 from cs2trader.config import load_settings, require_secret
 from cs2trader.errors import ConfigError, Cs2Error, SteamAuthError
+from cs2trader.evaluate import make_spec
 from cs2trader.items import update_items
 from cs2trader.market.index import market_index
 from cs2trader.market.regimes import label_regimes
-from cs2trader.models import RunSpec
 from cs2trader.sources import fx, steam
 from cs2trader.store import Store
 from cs2trader.strategies.registry import REGISTRY
@@ -51,7 +51,8 @@ def cmd_backfill_steam(args: argparse.Namespace) -> None:
     client = steam.SteamClient(
         require_secret("STEAM_LOGIN_SECURE"), interval_s=settings.steam.interval_s,
         max_retries=settings.steam.max_retries, backoff_s=settings.steam.backoff_s,
-        on_request=request_logger(settings.data_dir / "logs" / "steam_requests.tsv"))
+        on_request=request_logger(settings.data_dir / "logs" / "steam_requests.tsv"),
+        quarantine_dir=settings.data_dir / "quarantine" / "steam")
     try:
         rep = backfill(store, client, names, lambda: store.fx(datetime.now(UTC).date(), "UAH"),
                        refresh=args.refresh, limit=args.limit,
@@ -86,8 +87,8 @@ def cmd_strategies(args: argparse.Namespace) -> None:
 
 def cmd_backtest(args: argparse.Namespace) -> None:
     settings = load_settings()
-    spec = RunSpec(args.strategy, parse_params(args.strategy, args.params), args.capital,
-                   date.fromisoformat(args.date_from), date.fromisoformat(args.date_to))
+    spec = make_spec(args.strategy, parse_params(args.strategy, args.params), args.capital,
+                     date.fromisoformat(args.date_from), date.fromisoformat(args.date_to), settings)
     result = run(spec, Store(settings.data_dir), settings)
     out = save_run(result, settings.data_dir / "runs")
     eq = result.equity

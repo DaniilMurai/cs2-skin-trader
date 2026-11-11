@@ -47,16 +47,26 @@ def test_rewrite_same_host_overwrites(tmp_path):
     assert s.db.execute("SELECT count(*) FROM bids").fetchone()[0] == 1
 
 
-def test_data_version(tmp_path):
+def test_data_version_follows_content_not_snapshots(tmp_path):
     s = Store(tmp_path)
-    v0 = s.data_version()
+    v0, snap0 = s.data_version(), s.snapshot_version()
     s.write_snapshot(asks())
+    assert s.data_version() == v0 and s.snapshot_version() != snap0
+    s.write_snapshot(asks(feed=T0 + timedelta(hours=1)))
+    assert s.data_version() == v0
+    s.db.execute("INSERT INTO items (name, category) VALUES ('a', 'knife')")
     v1 = s.data_version()
     assert v1 != v0
-    s.write_snapshot(asks("mac"))
-    assert s.data_version() == v1
-    s.write_snapshot(asks(feed=T0 + timedelta(hours=1)))
+    s.db.execute("UPDATE items SET category = 'glove'")
     assert s.data_version() != v1
+
+
+def test_data_version_sees_price_rescaling(tmp_path):
+    s = Store(tmp_path)
+    s.db.execute("INSERT INTO steam_points VALUES ('a', TIMESTAMPTZ '2024-01-01', 'daily', 1.0, 'UAH', 5, 40.0, DATE '2024-01-01', 1.0)")
+    v = s.data_version()
+    s.db.execute("UPDATE steam_points SET price_usd = price_usd * 1.5")
+    assert s.data_version() != v
 
 
 def test_view_visible_to_reopened_store(tmp_path):
