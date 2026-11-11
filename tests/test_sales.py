@@ -170,3 +170,26 @@ def test_zero_sale_item_waits_for_largest_tier(tmp_path):
     store = Store(tmp_path)
     assert sales_due(store, now + timedelta(hours=23), McSettings()) == []
     assert sales_due(store, now + timedelta(hours=25), McSettings()) == ["Quiet Item"]
+
+
+def test_poll_without_new_sales_resets_the_clock(tmp_path):
+    store = Store(tmp_path)
+    seed(store, "thin", 30 * 24, T0)
+    assert due_at(store, 24) == ["thin"]
+    # A re-poll at T0+24h that adds no sale leaves only a sales_polls row, which must count as a poll.
+    t1 = T0 + timedelta(hours=24)
+    import cs2trader.store as st
+    orig = st.datetime
+
+    class Fixed(orig):
+        @classmethod
+        def now(cls, tz=None):
+            return t1
+    st.datetime = Fixed
+    try:
+        store.write_sales({"thin": []}, "again")
+    finally:
+        st.datetime = orig
+    store = Store(tmp_path)
+    assert due_at(store, 25) == []
+    assert due_at(store, 48) == ["thin"]

@@ -19,11 +19,16 @@ _WINDOW = 100
 
 
 def sales_due(store: Store, now: datetime, s: McSettings) -> list[str]:
+    # `sales` is deduplicated and keeps each sale's first fetch time, so a poll that found nothing new
+    # only shows up in sales_polls; without it the item would count as overdue on every run.
     tiers = sorted(s.sales_tiers_h)
     stats = store.db.sql(f"""
         SELECT market_hash_name AS name,
                epoch(max(ts)) - epoch(min(ts)) AS span_s,
-               (SELECT epoch(max(fetched_at)) FROM sales x WHERE x.market_hash_name = r.market_hash_name) AS fetched_s
+               greatest(
+                   (SELECT epoch(max(fetched_at)) FROM sales x WHERE x.market_hash_name = r.market_hash_name),
+                   coalesce((SELECT epoch(max(polled_at)) FROM sales_polls q
+                             WHERE q.market_hash_name = r.market_hash_name), 0)) AS fetched_s
         FROM (SELECT *, row_number() OVER (PARTITION BY market_hash_name ORDER BY ts DESC) AS rn FROM sales) r
         WHERE rn <= {_WINDOW}
         GROUP BY market_hash_name
