@@ -72,3 +72,13 @@ def test_data_version_sees_price_rescaling(tmp_path):
 def test_view_visible_to_reopened_store(tmp_path):
     Store(tmp_path).write_snapshot(bids())
     assert Store(tmp_path).db.execute("SELECT bid, orders FROM bids").fetchall() == [(9.5, 7)]
+
+
+def test_gha_row_wins_over_mac_for_the_same_feed_time(tmp_path):
+    s = Store(tmp_path)
+    mac = Snapshot("asks", T0, FETCHED, "mac", [AskRow("AK", 1.0, 1), AskRow("Only mac", 2.0, 2)])
+    gha = Snapshot("asks", T0, FETCHED, "gha", [AskRow("AK", 10.0, 3)])
+    s.write_snapshot(mac)
+    s.write_snapshot(gha)
+    rows = s.db.execute("SELECT market_hash_name, ask FROM asks ORDER BY 1").fetchall()
+    assert rows == [("AK", 10.0), ("Only mac", 2.0)]
