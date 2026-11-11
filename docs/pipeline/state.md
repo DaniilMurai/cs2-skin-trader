@@ -3,6 +3,7 @@
 Project: cs2-skin-trader (research)
 Updated: 2026-11-09
 
+Spike S-10 written 2026-11-11 (docs/pipeline/spikes/10-cloudflare-collector/, waits for the author to deploy it): can a Cloudflare Worker cron + R2 replace the GitHub collector (T-08)?
 Plan amended 2026-11-11: step 7 (local UI), AC-15…18, tasks T-35…T-42 (author's request); next: T-35 (re-run the full report), then the UI tasks in order.
 Current stage: **9 — feedback done 2026-11-11 (fixes in decisions.md; open author questions at its end); next pass restarts at stage 7**
 Stage 8 audit: (docs/pipeline/audit.md: 2 critical, 9 major, 11 minor); gate to stage 9 waits for the author. Stage 7 still has open real-data tasks (below).

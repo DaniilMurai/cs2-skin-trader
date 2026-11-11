@@ -1,0 +1,15 @@
+name = "cs2-collector-spike"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+
+[triggers]
+# :07 so the samples are independent of the Mac (:47) and GitHub (:17)
+crons = ["7 * * * *"]
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "cs2-collector-spike"
+
+[vars]
+# "1" gzips before storing (~275 KB instead of 2.5 MB per feed) but costs CPU time; the spike runs both
+COMPRESS = "0"
