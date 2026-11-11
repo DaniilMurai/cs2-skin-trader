@@ -24,6 +24,10 @@ decline. Nothing in the holdout is used to choose rules or parameters.
    and a verdict per strategy and capital by a fixed rule. Done = AC-11, AC-12, AC-13.
 6. **Forward paper test on market.csgo data** — run the same strategies hour by hour on
    our own collected snapshots, no real orders. Done = AC-14.
+7. **Local UI** (added 2026-11-11 at the author's request) — `cs2 ui` serves a web app on
+   localhost to see the verdict, one run's equity curve and trades, the market index with
+   regimes, and the collector's health, and to edit settings and start backtests. Done =
+   AC-15, AC-16, AC-17, AC-18.
 
 ## Acceptance criteria
 
@@ -135,12 +139,48 @@ AC-14: Given — ≥ 28 days of hourly market.csgo snapshots.
        each decision hour, and the report gets a "forward" column next to the backtest
        results for the same dates.
 
+AC-15: Given — a report and data exist.
+       When — `cs2 ui` runs and the pages are opened.
+       Then — four views work: **Verdict** (every strategy × capital × regime, holds up / fails
+       with the first broken rule, the benchmarks next to it); **Run** (equity curve in both
+       profit units, drawdown, trade list of one run); **Market** (index level with regime
+       bands, category indices, one item's price); **Collector** (snapshots per hour, gaps, item
+       share, GitHub vs Mac, data freshness). Every page shows the data version and the last
+       data day. The numbers on the Verdict page equal the report's results table (same hash),
+       and an empty database shows a message instead of an error.
+
+AC-16: Given — the Settings page.
+       When — a value is edited and saved.
+       Then — the groups strategy parameters, costs and fills, regime and universe, and report
+       windows (walk-forward windows, capitals, holdout start) can be changed; an invalid
+       value is rejected with the reason and nothing is written; a valid one goes to `cs2.toml`
+       (the old file kept as `cs2.toml.bak`) and the page says that results made under other
+       settings have a different `run_id`. The verdict rule's thresholds (AC-12: cost +50%,
+       spread ×2, deflation) are shown read-only; secrets (`.env`) are never read or shown.
+       Changing the holdout start shows a warning that the holdout then stops being untouched.
+
+AC-17: Given — the Run form (strategy, params, capital, date range).
+       When — a backtest is started from the UI.
+       Then — it runs as a separate process, shows progress, and the result appears on the Run
+       page; the same spec gives the same `run_id` and numbers as `cs2 backtest`; only one job
+       writes to the database at a time and the UI says "busy" instead of failing when a
+       collector run, backfill or other job holds the DuckDB file; closing the browser does not
+       kill the job.
+
+AC-18: Given — the UI process.
+       When — it is started and used.
+       Then — it listens on 127.0.0.1 only; no page or endpoint places, cancels or prepares an
+       order on Steam or market.csgo; secret values never appear in any response; every
+       state-changing request must carry a token created at start-up (a page on another site
+       cannot trigger a run or a settings write); a test checks each of these.
+
 ## Non-goals
 - Real-money trading, placing or cancelling orders on market.csgo or Steam.
 - Paid data APIs.
 - Float, pattern, sticker premiums; each `market_hash_name` is one fungible item.
 - Intraday strategies on the past (no hourly history before our collector starts).
-- A web UI or a hosted service: CLI + a static HTML report.
+- A hosted service, or a UI reachable from outside this Mac, or any trading from the UI. (A local UI is
+  in scope since 2026-11-11: step 7. Earlier this line excluded any web UI.)
 
 ## Spikes (stage 3) — answered, see spikes/FINDINGS.md
 - S-01: Does Steam `pricehistory` return multi-year daily price + volume with the author's

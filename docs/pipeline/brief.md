@@ -48,6 +48,9 @@ that kind of bot survives real costs.
   Steam wallet (for comparison with selling on Steam).
 - Starting capital: **$100 and $1,000**, each run and judged separately.
 
+- A local web UI (`cs2 ui`, added 2026-11-11): see the verdict, a run's equity and trades, the market
+  and regimes, collector health; edit settings and start backtests. Localhost only, no trading.
+
 **Out of scope (non-goals):**
 - Real-money trading, placing orders on market.csgo or Steam, or any account automation
   beyond reading prices.

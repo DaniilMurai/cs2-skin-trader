@@ -30,3 +30,13 @@
 |---|---|---|
 | AC-1 rewritten: zero HTTP 429 and a peak ≤ 62 requests per 60 s; first dates by the share rule (≤ 10 % early, median 0…7 d), per-item rule dropped. `cs2 data check` now fails on any 429 | keep 24/min; keep the per-item rule | 27,236 requests at ~1 s gave 0 × 429 (199 × 500 = unknown names, 2 × 502, 9 × 0); no independent first-sale source exists, and the DB release date fails 40 % of items |
 | AC-5: crash week is an observation, regime lookback stays 30 days | switch to 7 or 14 days to label 2025-10-23…28 `falling` | `events.csv` has no dated market-wide shocks before 2025-10 (cases, Majors, one update), so an out-of-sample event test was not possible. Without the crash week, fewest label flips/yr favours 30 d (22.7 vs 24.0 for 7 d and 29.9 for 14 d); label shares 2019-01…2025-09: 30 d falling 16.9 / flat 49.9 / rising 33.2 %, 7 d 8.2 / 83.2 / 8.6 %, 14 d 13.3 / 63.0 / 23.6 %. 7 d and 14 d label 10-23…28 `falling` (10-22 is `flat` at both: the drop is not in the data yet). V2/trend read the same index, so switching would change their behaviour |
+
+## 2026-11-11 — local UI added to the plan (author's request)
+
+| Decision | Alternatives | Why |
+|---|---|---|
+| Plan step 7 + AC-15…18, tasks T-35…T-42: a local web app (`cs2 ui`) on 127.0.0.1 | richer static report only; hosted site | The author wants to see results and change settings; local keeps the 3.8 GB database and secrets on the Mac. The non-goal "A web UI" was narrowed to "hosted or non-local UI, trading from the UI" |
+| Views: verdict, run (equity + trades), market + regimes, collector health | — | Author's choice |
+| Editable: strategy params, costs and fills, regime and universe, report windows incl. holdout start | — | Author's choice. The verdict thresholds (AC-12) stay read-only so the rule stays fixed in advance; the holdout start can be changed but warns that the holdout is then no longer untouched. Say if the thresholds should be editable too |
+| Stdlib server + vanilla JS + inline SVG charts; UI opens DuckDB read-only per request, writes only via `cs2` subprocesses | FastAPI/React | No new runtime dependency, works offline; DuckDB allows one writer, so the UI must not hold the file |
+| First task is T-35: re-run the full report | — | The only verdict so far predates the audit fixes |

@@ -1,6 +1,6 @@
 # Tasks
 
-Updated: 2026-11-09. Order in the file = order of execution. The collector goes first: every
+Updated: 2026-11-11 (group H, the UI, added). Order in the file = order of execution. The collector goes first: every
 day it isn't running is a day of market.csgo data we can never get back (AC-6 needs ≥ 14 days,
 AC-14 needs ≥ 28). Shapes, names and exit codes are in `contracts.md`; this file doesn't repeat
 them. Already built by the stage-5 slice: `errors.py`, `models.py` (part), `require_secret`,
@@ -409,3 +409,87 @@ Until then they are skipped and the next task in order is taken.
            --strategy v1_dip_knives` writes trades and equity, and the report shows the column
       Executor: main loop
       Depends on: T-17, T-31
+
+## H. Local UI (Plan step 7, AC-15…AC-18; added 2026-11-11)
+
+Design choices made here, not in the plan: Python standard library `http.server` (no new runtime
+dependency), JSON endpoints under `/api/`, plain HTML + vanilla JS pages, charts drawn as inline SVG
+by a small vendored function (no CDN, works offline). The UI process opens DuckDB read-only per
+request and never keeps the file open; anything that writes runs as a subprocess (`cs2 ...`).
+
+- [ ] T-35 — Re-run the full report after the audit fixes
+      Files: reports/ (output only), docs/pipeline/state.md
+      Do: `uv run cs2 report` on the merged data with the fixed benchmarks and chaining; record the
+          new verdict in state.md and decisions.md (the 2026-11-10 verdict was computed before the fixes)
+      DoD: the report finishes in < 2 h; two runs give the same results hash; the first line says which
+           strategies hold up (or that none does)
+      Executor: main loop
+      Depends on: T-31
+
+- [ ] T-36 — UI server skeleton and safety rails (AC-18)
+      Files: src/cs2trader/ui/server.py, src/cs2trader/ui/security.py, src/cs2trader/cli.py,
+             tests/test_ui_security.py
+      Do: `cs2 ui [--port N]` binds 127.0.0.1; a start-up token required on every POST (sent in a
+          header, embedded in the served page); a response filter that fails a test if a secret value
+          appears; no order-related endpoint exists
+      DoD: `uv run pytest tests/test_ui_security.py` green: bind address, POST without token → 403,
+           with `.env` values set no response body contains them, route list has no order route
+      Executor: main loop
+      Depends on: T-31
+
+- [ ] T-37 — Read API: report, runs, market, collector (AC-15)
+      Files: src/cs2trader/ui/api.py, tests/test_ui_api.py
+      Do: JSON for the latest verdict table, one run's equity and trades, index + regimes + category
+          indices + one item's bars, collector status (reuse `collect_status`); each carries
+          `data_version` and the last data day; an empty database gives an empty-state payload
+      DoD: `uv run pytest tests/test_ui_api.py` green; the verdict payload's results hash equals the
+           report's for the same run; works while another process holds the database (busy flag)
+      Executor: subagent
+      Depends on: T-36
+
+- [ ] T-38 — Verdict and Run pages (AC-15)
+      Files: src/cs2trader/ui/static/*, tests/test_ui_pages.py
+      Do: table with holds up / fails + first broken rule and benchmarks beside it; a run page with the
+          equity curve in both units, drawdown shading and the trade table; inline-SVG chart helper
+      DoD: pages served and render in the built-in browser against a real run (screenshot checked by the
+           author); `tests/test_ui_pages.py` green on a fixture run
+      Executor: subagent
+      Depends on: T-37
+
+- [ ] T-39 — Market and Collector pages (AC-15)
+      Files: src/cs2trader/ui/static/*
+      Do: index level with regime bands and a category selector; one item's price chart with search;
+          collector page with snapshots per hour, gaps, item share, source (gha/mac), freshness
+      DoD: both pages render on real data in the built-in browser; a fixture test covers the empty state
+      Executor: subagent
+      Depends on: T-37
+
+- [ ] T-40 — Settings editor (AC-16)
+      Files: src/cs2trader/ui/settings_api.py, src/cs2trader/config.py, tests/test_ui_settings.py
+      Do: read the editable groups from `Settings`, validate against the dataclass types and ranges,
+          write `cs2.toml` atomically with a `.bak`, show verdict thresholds read-only, never touch
+          `.env`; the holdout-start warning
+      DoD: `uv run pytest tests/test_ui_settings.py` green: invalid value → rejected, file unchanged;
+           valid → file written, `load_settings` returns it, `.bak` has the old content; verdict
+           thresholds and secrets are not writable through the endpoint
+      Executor: main loop
+      Depends on: T-36
+
+- [ ] T-41 — Job runner and the Run form (AC-17)
+      Files: src/cs2trader/ui/jobs.py, src/cs2trader/ui/static/*, tests/test_ui_jobs.py
+      Do: a single-slot queue that starts `cs2 backtest` as a subprocess, streams its progress, survives
+          the browser closing; "busy" when the DuckDB file is locked or a job is running; the form
+          validates the strategy and params with the same code as `cs2 backtest`
+      DoD: `uv run pytest tests/test_ui_jobs.py` green: the same spec through the UI and the CLI gives the
+           same `run_id`; a second job while one runs → busy; a killed browser connection does not stop it
+      Executor: main loop
+      Depends on: T-40, T-38
+
+- [ ] T-42 — End-to-end check of the UI
+      Files: docs/pipeline/brief.md (How to run)
+      Do: start `cs2 ui` on the real data clone, open every page in the built-in browser, edit a setting,
+          start a backtest, compare its numbers with the CLI; write the commands into "How to run"
+      DoD: all four views and both forms work live; the author has seen them; the audit (stage 8) is
+           repeated on `ui/` with the AC-18 checks run, not read
+      Executor: main loop
+      Depends on: T-39, T-41
