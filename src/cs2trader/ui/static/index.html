@@ -3,20 +3,34 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <meta name="cs2-token" content="__TOKEN__">
-<title>CS2 trader research</title>
+<title>CS2 skin research</title>
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<header>
-  <strong>CS2 trader research</strong>
-  <nav>
-    <a href="#/verdict">Verdict</a><a href="#/runs">Runs</a><a href="#/market">Market</a>
-    <a href="#/collector">Collector</a><a href="#/settings">Settings</a>
-  </nav>
-  <span id="overview" class="muted"></span>
+<a class="skip" href="#page">Skip to content</a>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#/home"><span class="logo" aria-hidden="true"></span>CS2 skin research</a>
+    <nav aria-label="Main">
+      <a href="#/home">Home</a>
+      <a href="#/verdict">Verdict</a>
+      <a href="#/runs">Try a strategy</a>
+      <a href="#/market">Market</a>
+      <a href="#/collector">Collector</a>
+      <a href="#/settings">Settings</a>
+      <a href="#/glossary">Glossary</a>
+    </nav>
+  </div>
 </header>
-<main id="page"></main>
+<main id="page" class="wrap" tabindex="-1"></main>
+<footer class="wrap foot">
+  <p id="datafoot"></p>
+  <p>Research only: this app never places an order or moves money. It runs on this computer and is not reachable from the network.</p>
+</footer>
+<script src="/static/ui.js"></script>
+<script src="/static/pages.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>

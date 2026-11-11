@@ -40,3 +40,13 @@
 | Editable: strategy params, costs and fills, regime and universe, report windows incl. holdout start | — | Author's choice. The verdict thresholds (AC-12) stay read-only so the rule stays fixed in advance; the holdout start can be changed but warns that the holdout is then no longer untouched. Say if the thresholds should be editable too |
 | Stdlib server + vanilla JS + inline SVG charts; UI opens DuckDB read-only per request, writes only via `cs2` subprocesses | FastAPI/React | No new runtime dependency, works offline; DuckDB allows one writer, so the UI must not hold the file |
 | First task is T-35: re-run the full report | — | The only verdict so far predates the audit fixes |
+
+## 2026-11-11 — UI rewritten for readability (author: "I don't understand all the things in the UI")
+
+| Decision | Alternatives | Why |
+|---|---|---|
+| New landing page "Where are we?" (verdict, data freshness, market mood, next steps), glossary of 29 terms with tooltips, plain-language sentences generated in `ui/plain.py` from the report numbers | keep the tables and add a help page | The first UI showed raw jargon and tables |
+| Renamed in the UI only: regime → market mood, max drawdown → worst dip, benchmarks → yardsticks, deflated Sharpe → luck check, holdout → final test period (exact term in the tooltip) | keep the quant terms | Author is new to the vocabulary; the research docs keep the exact terms |
+| Verdict cards show all five checks; the official first broken rule always wins | show only the first failure | More informative; the note says the official verdict stops at the first |
+| "Report out of date" is a heuristic (no `verdicts.json`, hash mismatch, or newer price data); it does not detect changed settings | track settings in the report | Cheap; may be improved later |
+| "None hold up" is shown in neutral grey, not red | red | It is a valid research result, not an error |

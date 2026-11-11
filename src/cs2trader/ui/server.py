@@ -96,6 +96,7 @@ def make_handler(app: App):
                 return self._send(200, f.read_bytes(), STATIC_TYPES[".html"])
             routes = {
                 "/api/overview": lambda: api.overview(ctx),
+                "/api/home": lambda: api.home(ctx, app.jobs.snapshot().get("state") == "running"),
                 "/api/verdict": lambda: api.verdict(ctx, q.get("day")),
                 "/api/runs": lambda: api.runs(ctx),
                 "/api/market/index": lambda: api.market_index_series(ctx),

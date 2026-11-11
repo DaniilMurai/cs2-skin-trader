@@ -493,3 +493,10 @@ request and never keeps the file open; anything that writes runs as a subprocess
            repeated on `ui/` with the AC-18 checks run, not read
       Executor: main loop
       Depends on: T-39, T-41
+
+- [x] T-43 — UI rewrite for readability *(2026-11-11, strong-model subagent; 258 tests; every page checked in the browser on the real data clone at desktop and 375 px; not yet verified: busy/failed-job/no-collector states in the browser, keyboard-only use, widths above 800 px)*
+      Files: src/cs2trader/ui/plain.py, src/cs2trader/ui/static/*, src/cs2trader/ui/api.py, settings_api.py
+      Do: Home page, glossary, plain-language verdict scoreboard, guided "Try a strategy" flow, explained settings
+      DoD: tests/test_ui.py green; the author finds the pages understandable (to be confirmed)
+      Executor: subagent
+      Depends on: T-41

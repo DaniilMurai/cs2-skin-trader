@@ -14,6 +14,7 @@ from cs2trader.collect import collect_status
 from cs2trader.config import Settings
 from cs2trader.report import results_hash
 from cs2trader.store import Store
+from cs2trader.ui import plain
 
 RUN_ID = re.compile(r"^[0-9a-f]{16}$")
 REPORT_DAY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -96,9 +97,16 @@ def verdict(ctx: Ctx, day: str | None = None) -> dict:
         store.close()
     else:
         last_day = None
+    hash_ok = None if meta is None else meta["results_hash"] == digest
+    boards = plain.scoreboard(shown, meta["verdicts"] if meta else None, ctx.settings)
     return {
         "state": "ok", "day": day, "reports": days, "results_hash": digest,
-        "hash_matches_report": None if meta is None else meta["results_hash"] == digest,
+        "is_latest": day == days[0],
+        "hash_matches_report": hash_ok,
+        "headline": plain.verdict_headline(boards, meta is not None),
+        "scoreboard": boards,
+        "freshness": plain.report_freshness(day, meta is not None, hash_ok, last_day),
+        "holdout_start": ctx.settings.wf.holdout_start.isoformat(),
         "summary": meta["summary"] if meta else None,
         "verdicts": meta["verdicts"] if meta else None,
         "verdicts_note": None if meta else "This report predates verdicts.json; re-run `cs2 report` for the table.",
@@ -116,12 +124,28 @@ def runs(ctx: Ctx) -> dict:
                 continue
             meta = json.loads(spec.read_text())
             s = meta["spec"]
-            out.append({"run_id": meta["run_id"], "strategy": s["strategy"], "capital": s["capital"],
+            out.append({"run_id": meta["run_id"], "strategy": s["strategy"],
+                        "label": plain.strategy_label(s["strategy"]), "capital": s["capital"],
                         "start": s["start"], "end": s["end"], "params": s["params"],
                         "mtime": spec.stat().st_mtime})
     out.sort(key=lambda r: r["mtime"], reverse=True)
-    return {"state": "ok" if out else "empty", "runs": out[:200],
+    out = out[:200]
+    for r in out:
+        r["end_cash"] = _run_end_cash(root / r["run_id"])
+    return {"state": "ok" if out else "empty", "runs": out,
             "message": None if out else "No runs yet: start one on this page or with `cs2 backtest`."}
+
+
+def _run_end_cash(folder: Path) -> float | None:
+    """Final cash-out value of a saved run, for the list of past runs."""
+    f = folder / "equity.parquet"
+    if not f.exists():
+        return None
+    key = ("end_cash", str(f), f.stat().st_mtime_ns)
+    if key not in _cache:
+        col = pl.read_parquet(f, columns=["equity_cash"])["equity_cash"]
+        _cache[key] = col[-1] if col.len() else None
+    return _cache[key]
 
 
 def run_detail(ctx: Ctx, run_id: str) -> tuple[int, dict]:
@@ -137,7 +161,11 @@ def run_detail(ctx: Ctx, run_id: str) -> tuple[int, dict]:
         eq = eq.with_columns((pl.col(col) / pl.col(col).cum_max() - 1).alias(f"drawdown_{unit}"))
     trades = pl.read_parquet(folder / "trades.parquet").with_columns(pl.col("t").cast(pl.String))
     filled = trades.filter(pl.col("qty_filled") > 0)
+    costs = (meta["spec"].get("costs") or [None])[-1]
+    # The summary reads the full curve: downsampling could drop the worst day.
+    summary = plain.run_summary(meta["spec"], _json_rows(eq), filled.height, trades.height, costs)
     return 200, {"state": "ok", "meta": meta, "equity": _json_rows(_downsample(eq)),
+                 "label": plain.strategy_label(meta["spec"]["strategy"]), "summary": summary,
                  "n_trades": trades.height, "n_filled": filled.height,
                  "trades": _json_rows(trades.head(MAX_TRADES))}
 
@@ -152,7 +180,9 @@ def market_index_series(ctx: Ctx) -> dict:
         store.close()
     if df.is_empty():
         return {"state": "empty", "message": "No regime labels yet: run `cs2 regimes`."}
-    return {"state": "ok", "points": _json_rows(_downsample(df)), "n_days": df.height}
+    r = ctx.settings.regimes
+    return {"state": "ok", "points": _json_rows(_downsample(df)), "n_days": df.height,
+            "now": plain.market_now(_json_rows(df.tail(400)), r.lookback_days, r.threshold)}
 
 
 def market_categories(ctx: Ctx, days: int = 730) -> dict:
@@ -230,18 +260,58 @@ def collector(ctx: Ctx, hours: int = 48) -> dict:
     if latest:
         age_h = round((datetime.now(UTC) - datetime.fromisoformat(latest.replace(" ", "T")
                        .replace("+00", "+00:00"))).total_seconds() / 3600, 1)
-    return {"state": "ok", "window_h": hours, "snapshots": status.snapshots,
-            "min_item_share": status.min_item_share, "target": 44 * hours // 48,
-            "gaps": [[g[0].isoformat(), g[1].isoformat()] for g in status.gaps],
-            "low_share_hours": [h.isoformat() for h in status.low_share],
-            "latest_feed_time": latest, "age_hours": age_h, "per_hour": _json_rows(per_hour)}
+    out = {"state": "ok", "window_h": hours, "snapshots": status.snapshots,
+           "min_item_share": status.min_item_share, "target": 44 * hours // 48,
+           "gaps": [[g[0].isoformat(), g[1].isoformat()] for g in status.gaps],
+           "low_share_hours": [h.isoformat() for h in status.low_share],
+           "latest_feed_time": latest, "age_hours": age_h, "per_hour": _json_rows(per_hour)}
+    out["summary"] = plain.collector_summary(out)
+    return out
 
 
 def strategies() -> dict:
+    from cs2trader.strategies import event, mean_reversion, momentum, trend, video
     from cs2trader.strategies.registry import REGISTRY
 
-    return {"strategies": [{"name": n, "family": e.family, "grid": {k: list(v) for k, v in e.grid.items()},
-                            "spec": e.spec_md} for n, e in sorted(REGISTRY.items())]}
+    built_in = {"v1_dip_knives": video.V1_DEFAULTS, "v2_category_momentum": video.V2_DEFAULTS,
+                "xs_momentum": momentum.XS_DEFAULTS, "trend_ma": trend.TREND_DEFAULTS,
+                "mean_reversion": mean_reversion.MR_DEFAULTS, "event": event.EVENT_DEFAULTS}
+    out = []
+    for n, e in sorted(REGISTRY.items()):
+        text = plain.STRATEGIES.get(n, {})
+        params = []
+        for key, options in e.grid.items():
+            label, unit, help_text = plain.PARAMS.get((n, key), (key, "", ""))
+            params.append({"key": key, "label": label, "unit": unit, "help": help_text,
+                           "options": list(options), "default": built_in.get(n, {}).get(key)})
+        out.append({"name": n, "family": e.family, "grid": {k: list(v) for k, v in e.grid.items()},
+                    "spec": e.spec_md, "label": text.get("label", n), "summary": text.get("summary", ""),
+                    "family_label": plain.FAMILIES.get(e.family, e.family),
+                    "is_benchmark": e.family == "benchmark", "params": params})
+    return {"strategies": out}
+
+
+def home(ctx: Ctx, job_running: bool = False) -> dict:
+    """The landing page: four plain answers and what to do next, each from the same data its page shows."""
+    ov = overview(ctx)
+    v = verdict(ctx)
+    if v["state"] == "ok":
+        vblock = {**v["headline"], "state": "ok", "day": v["day"], "freshness": v["freshness"],
+                  "lines": [b["headline"] for b in v["scoreboard"]] if v["verdicts"] is not None else []}
+    else:
+        vblock = {"state": "empty", "status": "unknown", "headline": "No verdict yet",
+                  "detail": "No report has been built, so no strategy has been judged.", "lines": []}
+    data = plain.data_block(ov)
+    coll = plain.collector_summary(collector(ctx))
+    idx = market_index_series(ctx)
+    if idx.get("state") == "ok" and idx["now"]:
+        market = {"state": "ok", **idx["now"]}
+    else:
+        market = {"state": idx.get("state", "empty"), "regime": None, "headline": "No market picture yet",
+                  "detail": idx.get("message") or "Run `cs2 regimes` to label the market."}
+    return {"state": "ok", "verdict": vblock, "data": data, "collector": coll, "market": market,
+            "next": plain.next_steps(vblock, data, coll, job_running),
+            "data_version": ov.get("data_version"), "last_day": ov.get("last_day")}
 
 
 def settings_dump(settings: Settings) -> dict:

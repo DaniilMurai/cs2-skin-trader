@@ -48,15 +48,27 @@ def _get(obj: Any, key: str) -> Any:
 
 
 def describe(settings: Settings) -> dict:
+    from cs2trader.ui import plain
+
+    def shown(value: Any) -> Any:
+        return value.isoformat() if isinstance(value, date) else value
+
+    defaults = Settings()
     groups: dict[str, list[dict]] = {}
     for key, (group, lo, hi) in EDITABLE.items():
         value = _get(settings, key)
+        label, unit, help_text, effect = plain.SETTINGS_TEXT.get(key, (key, "", "", ""))
         groups.setdefault(group, []).append(
-            {"key": key, "value": value.isoformat() if isinstance(value, date) else value,
-             "min": lo, "max": hi, "kind": type(value).__name__})
-    return {"groups": groups,
-            "read_only": [{"key": k, "value": _get(settings, k), "why": why} for k, why in READ_ONLY.items()],
-            "holdout_warning": HOLDOUT_WARNING}
+            {"key": key, "value": shown(value), "min": lo, "max": hi, "kind": type(value).__name__,
+             "label": label, "unit": unit, "help": help_text, "effect": effect,
+             "default": shown(_get(defaults, key))})
+    read_only = []
+    for k, why in READ_ONLY.items():
+        label, unit, help_text = plain.READ_ONLY_TEXT.get(k, (k, "", ""))
+        read_only.append({"key": k, "value": _get(settings, k), "why": why, "label": label, "unit": unit,
+                          "help": help_text})
+    return {"groups": groups, "group_intros": plain.GROUP_INTROS, "read_only": read_only,
+            "read_only_why": plain.READ_ONLY_WHY, "holdout_warning": HOLDOUT_WARNING}
 
 
 def validate(settings: Settings, changes: dict[str, Any]) -> tuple[Settings, list[str]]:

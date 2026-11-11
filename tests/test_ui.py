@@ -101,7 +101,8 @@ def test_foreign_host_header_is_refused(env):
 def test_no_response_contains_a_secret_value(env):
     app, _ = env
     paths = ["/", "/api/overview", "/api/verdict", "/api/runs", "/api/market/index", "/api/collector",
-             "/api/strategies", "/api/settings", "/api/jobs", "/static/app.js", "/reports/2026-01-01/report.html"]
+             "/api/strategies", "/api/settings", "/api/jobs", "/api/home", "/static/app.js", "/static/ui.js",
+             "/static/pages.js", "/static/style.css", "/reports/2026-01-01/report.html"]
     for p in secret_values(app.env_path):
         assert p
     for path in paths:
@@ -288,3 +289,180 @@ def test_job_survives_without_a_client(tmp_path):
             break
         time.sleep(0.2)
     assert runner.snapshot()["state"] in ("failed", "done")
+
+
+# ---- plain-language layer (UI redesign): every sentence comes from the data --------------------
+
+def _results(rows):
+    base = {"regime": "all", "unit": "cash", "n_trades": 3, "fees_paid": 1.0, "sharpe": 0.1}
+    return pl.DataFrame([{**base, "strategy": s, "capital": c, "period": p, "net_return": r, "max_drawdown": d}
+                         for s, c, p, r, d in rows])
+
+
+def test_rule_texts_cover_exactly_the_verdict_rules():
+    import re
+
+    from cs2trader.ui import plain
+    src = (Path(__file__).parents[1] / "src/cs2trader/evaluate.py").read_text()
+    body = src[src.index("def verdict("):]
+    assert re.findall(r'\("(\w+)", ', body[:body.index("broken =")]) == list(plain.RULES)
+
+
+def test_scoreboard_translates_the_first_broken_rule_and_never_flatters():
+    from cs2trader.config import Settings
+    from cs2trader.ui import plain
+    results = _results([("cash", 100.0, "holdout", -0.05, 0.0), ("bh_universe", 100.0, "holdout", 0.10, 0.20),
+                        ("a", 100.0, "holdout", -0.466, 0.5), ("b", 100.0, "holdout", 0.30, 0.1),
+                        ("b", 100.0, "holdout_stress", 0.20, 0.1), ("c", 100.0, "holdout", 0.05, 0.1)])
+    verdicts = [{"strategy": "a", "capital": 100.0, "status": "fails", "first_broken_rule": "beats_cash",
+                 "deflated_sharpe": -1.0, "n_variants": 3},
+                {"strategy": "b", "capital": 100.0, "status": "holds_up", "first_broken_rule": None,
+                 "deflated_sharpe": 0.4, "n_variants": 8},
+                {"strategy": "c", "capital": 100.0, "status": "fails", "first_broken_rule": "beats_bh",
+                 "deflated_sharpe": 0.2, "n_variants": 2}]
+    (board,) = plain.scoreboard(results, verdicts, Settings())
+    cards = {c["strategy"]: c for c in board["cards"]}
+    assert board["cards"][0]["strategy"] == "b"  # the passing one is listed first
+    assert cards["a"]["reason"] == "Did worse than just holding cash."
+    assert "$100 became $53.40 (−46.6\u00a0%)" in cards["a"]["result"]
+    assert cards["c"]["reason"] == "Did worse than buying and holding a basket of skins."
+    assert [k["ok"] for k in cards["c"]["checks"]][:2] == [True, False]
+    assert all(k["ok"] for k in cards["b"]["checks"]) and cards["b"]["reason"] == "Passed all five checks."
+    assert board["holds"] == ["b"] and board["benchmarks"]["cash"]["end_value"] == pytest.approx(95.0)
+    assert plain.verdict_headline([board], True)["status"] == "some"
+    # Without verdicts nothing is called passing or failing.
+    (bare,) = plain.scoreboard(results, None, Settings())
+    assert {c["status"] for c in bare["cards"]} == {None}
+    assert plain.verdict_headline([bare], False)["status"] == "unknown"
+
+
+def test_every_rule_code_has_a_failure_sentence():
+    from cs2trader.config import Settings
+    from cs2trader.ui import plain
+    results = _results([("cash", 100.0, "holdout", -0.05, 0.0), ("bh_universe", 100.0, "holdout", 0.1, 0.2),
+                        ("x", 100.0, "holdout", 0.0, 0.3)])
+    for code, text in plain.RULES.items():
+        v = [{"strategy": "x", "capital": 100.0, "status": "fails", "first_broken_rule": code,
+              "deflated_sharpe": -1.0, "n_variants": 3}]
+        card = plain.scoreboard(results, v, Settings())[0]["cards"][0]
+        assert card["reason"] == text["fail"]
+        failed = [k["code"] for k in card["checks"] if k["ok"] is False]
+        assert failed[0] == code
+
+
+def test_report_freshness_reasons():
+    from cs2trader.ui import plain
+    assert plain.report_freshness("2026-01-01", True, True, "2026-01-01") == {"stale": False, "reasons": [],
+                                                                               "advice": None}
+    f = plain.report_freshness("2026-01-01", False, False, "2026-01-04")
+    assert [r["code"] for r in f["reasons"]] == ["no_verdicts", "hash", "newer_data"]
+    assert "3 days past this report" in f["reasons"][2]["text"] and "cs2 report" in f["advice"]
+
+
+def test_collector_summary_traffic_light():
+    from cs2trader.ui import plain
+    base = {"state": "ok", "window_h": 48, "target": 44, "snapshots": 48, "gaps": [], "low_share_hours": [],
+            "min_item_share": 0.99, "age_hours": 0.4}
+    assert plain.collector_summary(base)["status"] == "green"
+    holes = plain.collector_summary({**base, "snapshots": 45,
+                                     "gaps": [["2026-11-10T13:00:00+00:00", "2026-11-10T16:00:00+00:00"]]})
+    assert holes["status"] == "amber" and "3 hours missing in the last 48 hours" in holes["headline"]
+    assert "3 hours missing from Nov 10, 13:00 to Nov 10, 16:00 UTC." in holes["points"]
+    assert plain.collector_summary({**base, "age_hours": 30.0})["status"] == "red"
+    assert plain.collector_summary({"state": "empty"})["status"] == "grey"
+
+
+def test_market_now_words():
+    from cs2trader.ui import plain
+    pts = [{"t": "2024-01-09", "index_level": 100.0, "ret": 0.0, "regime": "flat"},
+           {"t": "2024-01-10", "index_level": 95.0, "ret": -0.08, "regime": "falling"},
+           {"t": "2024-01-11", "index_level": 90.0, "ret": -0.10, "regime": "falling"}]
+    now = plain.market_now(pts, 30, 0.05)
+    assert now["headline"] == "The market is falling" and now["since"] == "2024-01-10"
+    assert "down 10.0\u00a0% over the last 30 days" in now["detail"] and now["year"] is None
+    assert plain.market_now([], 30, 0.05) is None
+
+
+def test_home_payload_answers_the_four_questions(env):
+    app, _ = env
+    status, body = call(app, "GET", "/api/home")
+    h = json.loads(body)
+    assert status == 200 and h["state"] == "ok"
+    assert h["verdict"]["status"] == "none" and h["verdict"]["headline"] == "No strategy is good enough to use"
+    assert h["market"]["regime"] == "falling" and h["market"]["headline"] == "The market is falling"
+    # The fixture's history ends in February 2024, so the data block must say it is old.
+    assert h["data"]["status"] == "amber" and "cs2 backfill steam" in h["data"]["advice"]
+    assert h["collector"]["status"] == "grey"
+    texts = " ".join(s["text"] for s in h["next"])
+    assert "cs2 backfill steam" in texts and "cs2 collect pull" in texts
+    assert h["last_day"] and h["data_version"]
+
+
+def test_home_on_an_empty_project(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    app = App(load_settings(tmp_path / "cs2.toml"), tmp_path / "cs2.toml", tmp_path / ".env")
+    server, _ = start_in_thread(app)
+    try:
+        h = json.loads(call(app, "GET", "/api/home")[1])
+        assert h["verdict"]["state"] == "empty" and h["data"]["status"] == "red" and h["market"]["regime"] is None
+        assert any("cs2 report" in s["text"] for s in h["next"])
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def test_verdict_payload_has_a_scoreboard_and_freshness(env):
+    app, _ = env
+    v = json.loads(call(app, "GET", "/api/verdict")[1])
+    card = v["scoreboard"][0]["cards"][0]
+    assert card["strategy"] == "x" and card["reason"] == "Did worse than just holding cash."
+    assert v["headline"]["status"] == "none" and v["is_latest"] is True
+    assert v["freshness"]["stale"] is False  # the report (2026-01-01) is newer than the data (2024)
+
+
+def test_run_detail_has_a_summary_in_words(env):
+    app, res = env
+    d = json.loads(call(app, "GET", f"/api/run/{res.run_id}")[1])
+    s, last = d["summary"], d["equity"][-1]
+    assert s["end_cash"] == pytest.approx(last["equity_cash"]) and s["capital"] == 100.0
+    assert s["return_cash"] == pytest.approx(last["equity_cash"] / 100.0 - 1)
+    assert s["worst_dip"] == pytest.approx(min(e["drawdown_cash"] for e in d["equity"]))
+    assert s["text"].startswith("Started with $100 on ") and "ended with $" in s["text"]
+    run = json.loads(call(app, "GET", "/api/runs")[1])["runs"][0]
+    assert run["label"] == "Buy and hold (all skins)" and run["end_cash"] == pytest.approx(last["equity_cash"])
+
+
+def test_strategies_and_settings_carry_plain_labels(env):
+    from cs2trader.strategies.registry import REGISTRY
+    from cs2trader.ui import plain
+    app, _ = env
+    st = json.loads(call(app, "GET", "/api/strategies")[1])["strategies"]
+    assert {s["name"] for s in st} == set(REGISTRY) == set(plain.STRATEGIES)
+    for s in st:
+        assert s["label"] != s["name"] and s["summary"]
+        assert [p["key"] for p in s["params"]] == list(s["grid"])
+        assert all(p["label"] != p["key"] and p["help"] for p in s["params"])
+    v1 = next(s for s in st if s["name"] == "v1_dip_knives")
+    assert next(p for p in v1["params"] if p["key"] == "drop_7d")["default"] == 0.10
+    se = json.loads(call(app, "GET", "/api/settings")[1])
+    items = [i for g in se["groups"].values() for i in g]
+    assert {i["key"] for i in items} == set(settings_api.EDITABLE) == set(plain.SETTINGS_TEXT)
+    assert all(i["label"] != i["key"] and i["help"] and i["effect"] for i in items)
+    fee = next(i for i in items if i["key"] == "costs.seller_fee")
+    assert fee["default"] == 0.05 and fee["unit"] == "share"
+    assert set(se["group_intros"]) == set(se["groups"]) and se["read_only_why"]
+
+
+def test_static_files_are_served_only_from_the_static_folder(env):
+    app, _ = env
+    for name in ("ui.js", "pages.js", "app.js", "style.css"):
+        assert call(app, "GET", f"/static/{name}")[0] == 200, name
+    for bad in ("/static/../server.py", "/static/..%2Fserver.py", "/static/sub/x.js", "/static/nope.js",
+                "/static/index.txt"):
+        assert call(app, "GET", bad)[0] == 404, bad
+
+
+def test_page_has_no_inline_script():
+    import re
+    html = (Path(__file__).parents[1] / "src/cs2trader/ui/static/index.html").read_text()
+    assert not re.search(r"<script(?![^>]*\bsrc=)", html) and " onclick=" not in html
