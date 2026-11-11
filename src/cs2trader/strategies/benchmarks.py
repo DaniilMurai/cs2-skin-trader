@@ -1,3 +1,4 @@
+import hashlib
 import math
 from collections.abc import Mapping
 from typing import Any
@@ -17,17 +18,22 @@ class Cash:
         return []
 
 
-def equal_split(prices: Mapping[str, float], budget: float) -> dict[str, int]:
-    """Equal dollar shares; an item dearer than its share is dropped and the budget re-split
-    across the rest, until every kept item is affordable. `prices` are expected fill prices."""
-    kept = dict(prices)
-    while kept:
-        share = budget / len(kept)
-        dear = [n for n, p in kept.items() if p > share]
-        if not dear:
-            return {n: math.floor(share / p) for n, p in kept.items()}
-        for n in dear:
-            del kept[n]
+def _stable_key(name: str) -> bytes:
+    return hashlib.blake2b(name.encode(), digest_size=8).digest()
+
+
+def equal_split(prices: Mapping[str, float], budget: float, max_items: int = 25) -> dict[str, int]:
+    """Equal-dollar basket of up to `max_items` items, picked by a stable name hash among the items
+    cheaper than their share. `prices` are expected fill prices.
+
+    Dropping every item dearer than the share in one pass emptied the basket on a real universe of
+    thousands of items (audit 2026-11-11); a fixed-size basket keeps the share large enough."""
+    order = sorted(prices, key=_stable_key)
+    for n in range(min(max_items, len(order)), 0, -1):
+        share = budget / n
+        eligible = [name for name in order if prices[name] <= share]
+        if len(eligible) >= n:
+            return {name: math.floor(share / prices[name]) for name in eligible[:n]}
     return {}
 
 

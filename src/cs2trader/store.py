@@ -39,6 +39,29 @@ _VIEW_COLUMNS = {
 _SALES_COLUMNS = "ts TIMESTAMPTZ, price_raw DOUBLE, currency VARCHAR"
 
 
+SPIKE_FACTOR = 5.0
+SPIKE_WINDOW = 7
+
+
+def cap_price_jumps(bars: pl.DataFrame) -> pl.DataFrame:
+    """Clip each bar's price to within SPIKE_FACTOR of the median of the item's previous bars.
+
+    Steam history has one-day prints at 5-30x the surrounding price (a $0.14 item at $4.48 for one
+    day); left in, they dominate drawdowns and mean-reversion signals. The reference uses only
+    earlier bars, so a bar never depends on later data; a genuine move of more than 5x is followed
+    over a few bars instead of being dropped.
+    """
+    if bars.is_empty():
+        return bars
+    ref = pl.col("price").shift(1).rolling_median(SPIKE_WINDOW, min_samples=3) \
+        .over("market_hash_name")
+    return bars.sort("market_hash_name", "t").with_columns(ref.alias("_ref")).with_columns(
+        pl.when(pl.col("_ref").is_null()).then(pl.col("price"))
+        .otherwise(pl.col("price").clip(pl.col("_ref") / SPIKE_FACTOR, pl.col("_ref") * SPIKE_FACTOR))
+        .alias("price")
+    ).drop("_ref").sort("t", "market_hash_name")
+
+
 class Store:
     def __init__(self, data_dir: Path) -> None:
         data_dir.mkdir(parents=True, exist_ok=True)
@@ -222,7 +245,7 @@ class Store:
     def daily_bars(self, start: date, end: date) -> pl.DataFrame:
         # Days with hourly points are collapsed to one bar: volume-weighted price, summed volume.
         # duckdb 2.0: .pl() exists on relations (sql), no longer on execute() results
-        return self.db.sql("""
+        bars = self.db.sql("""
             SELECT p.name AS market_hash_name, CAST(p.ts AS DATE) AS t,
                    COALESCE(SUM(p.price_usd * p.volume) / NULLIF(SUM(p.volume), 0),
                             AVG(p.price_usd)) AS price,
@@ -233,6 +256,7 @@ class Store:
             WHERE CAST(p.ts AS DATE) BETWEEN ? AND ?
             GROUP BY ALL ORDER BY t, market_hash_name
         """, params=[start, end]).pl()
+        return cap_price_jumps(bars)
 
     def data_version(self) -> str:
         parts = [str(self.db.execute("SELECT CAST(max(fetched_at) AS VARCHAR) FROM steam_fetch_log").fetchone()[0])]

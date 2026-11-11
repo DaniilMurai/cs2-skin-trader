@@ -79,3 +79,19 @@ def test_runs_at_both_capitals(strategy, capital):
     res = go(strategy, capital)
     assert res.equity.height > 0
     assert (res.equity["balance"] >= 0).all()
+
+
+def test_equal_split_invests_on_a_large_universe():
+    from cs2trader.strategies.benchmarks import equal_split
+    prices = {f"item {i}": 0.5 + i * 0.37 for i in range(5000)}
+    for budget in (100.0, 1000.0):
+        qty = equal_split(prices, budget)
+        spent = sum(q * prices[n] for n, q in qty.items())
+        assert len(qty) >= 5 and budget * 0.85 < spent <= budget
+        assert qty == equal_split(prices, budget)
+
+
+def test_equal_split_single_dear_item_for_small_budget():
+    from cs2trader.strategies.benchmarks import equal_split
+    assert equal_split({"knife": 90.0, "other knife": 300.0}, 100.0) == {"knife": 1}
+    assert equal_split({"knife": 300.0}, 100.0) == {}
