@@ -104,7 +104,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: main loop
       Depends on: T-01, T-07
 
-- [ ] T-09 — Mac launchd gap filler *(installed 2026-11-09 ~20:15 UTC; check ≥ 2 `-mac.parquet` files after 2 h)*
+- [x] T-09 — Mac launchd gap filler *(installed 2026-11-09 ~20:15 UTC; 2026-11-11 check: 14 `-mac.parquet` files for the day, far above the ≥ 2 required. Known limit: it skips hours while the Mac sleeps, e.g. 2026-11-11 12:00–13:44 UTC)*
       Files: ops/com.cs2trader.collect.plist, ops/README.md
       Do: a launchd agent running `cs2 collect run --kinds asks,bids --host mac` hourly
           (StartCalendarInterval, so a missed run fires on wake); logs to `data/logs/`.
@@ -180,7 +180,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: subagent
       Depends on: T-02
 
-- [ ] T-16 — Market index, regimes, `cs2 regimes` *(code and tests done 2026-11-09; real-data check waits for T-14)*
+- [x] T-16 — Market index, regimes, `cs2 regimes` *(2026-11-11 on the real data: 4,835 days 2013-08-16…2026-11-10, one label each; falling 1,131 / flat 2,301 / rising 1,403; crash week 2025-10-22…28 = rising, flat, falling, flat ×4 — an observation, AC-5 amended)*
       Files: src/cs2trader/market/index.py, src/cs2trader/market/regimes.py,
              src/cs2trader/cli.py, tests/test_regimes.py
       Do: decide the index method (weights, how items enter and leave, chain-linking) and
