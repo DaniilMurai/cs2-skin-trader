@@ -19,7 +19,8 @@ npx wrangler login
 npx wrangler r2 bucket create cs2-collector-spike
 TOK=$(openssl rand -hex 24)
 printf '%s' "$TOK" | npx wrangler secret put TRIGGER_TOKEN
-printf 'CF_WORKER_URL=https://<name>.<subdomain>.workers.dev\nCF_WORKER_TOKEN=%s\n' "$TOK" >> ../../.env
+# the leading \n matters: .env may not end with a newline, and without it the URL is glued onto the last key
+printf '\nCF_WORKER_URL=https://<name>.<subdomain>.workers.dev\nCF_WORKER_TOKEN=%s\n' "$TOK" >> ../../.env
 npx wrangler deploy
 ops/install-launchd.sh          # from the repo root: re-renders the launchd job that imports hourly
 ```
