@@ -3,7 +3,8 @@
 Project: cs2-skin-trader (research)
 Updated: 2026-11-09
 
-Current stage: **7 — implementation**
+Current stage: **8 — audit done 2026-11-11** (docs/pipeline/audit.md: 2 critical, 9 major, 11 minor); gate to stage 9 waits for the author. Stage 7 still has open real-data tasks (below).
+Previous: 7 — implementation
 Author's standing instruction (2026-11-09): work through tasks autonomously, commit each verified
 task or batch without asking; stop only for questions that need the author.
 Gates: passed up to and including stage 6 (author's go to stage 7, 2026-11-09)
