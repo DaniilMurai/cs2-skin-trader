@@ -417,7 +417,7 @@ dependency), JSON endpoints under `/api/`, plain HTML + vanilla JS pages, charts
 by a small vendored function (no CDN, works offline). The UI process opens DuckDB read-only per
 request and never keeps the file open; anything that writes runs as a subprocess (`cs2 ...`).
 
-- [ ] T-35 — Re-run the full report after the audit fixes
+- [x] T-35 — Re-run the full report after the audit fixes *(2026-11-11: 71 min with `--jobs 4` at `nice 19`, results hash d3ea18d4859fd53e, "No strategy holds up at $100 / $1,000"; NOT done: the second run to confirm the same hash)*
       Files: reports/ (output only), docs/pipeline/state.md
       Do: `uv run cs2 report` on the merged data with the fixed benchmarks and chaining; record the
           new verdict in state.md and decisions.md (the 2026-11-10 verdict was computed before the fixes)

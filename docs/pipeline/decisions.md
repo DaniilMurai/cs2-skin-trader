@@ -60,3 +60,21 @@
 | Sales polling stays on the Mac | polling in the Worker | Free plan allows 50 outgoing requests per run, polling needs ~240 |
 | The token travels in a header, not the URL; routes limited to `raw/` | query token | URLs show up in logs (the earlier `wrangler tail` printed it) |
 | GitHub collector stays as a backup for now | remove it | Cheap redundancy; revisit after a week of Worker data |
+
+## 2026-11-11 — first verdict after the audit fixes (T-35, hash d3ea18d4859fd53e)
+
+Holdout 2025-10-01 → 2026-11-10, cash-out units. Verdict: **no strategy holds up at $100 or $1,000**; every one fails the first rule (beats cash, which loses 5 % in withdraw fee); deflated Sharpe is negative for all.
+
+| Strategy | $100 | $1,000 |
+|---|---|---|
+| bh_universe (benchmark) | +61.9 % | +58.5 % |
+| cash | −5.0 % | −5.0 % |
+| trend_ma | −30.2 % | −30.4 % |
+| event | −46.6 % | −21.3 % |
+| v1_dip_knives | −65.0 % | −86.7 % |
+| bh_knives_gloves (benchmark) | −65.3 % | −51.9 % |
+| mean_reversion | −85.7 % | −59.2 % |
+| v2_category_momentum | −90.4 % | −76.9 % |
+| xs_momentum | −96.1 % | −99.8 % |
+
+Open doubts, not yet checked: (1) bh_universe is a 25-item basket picked by name hash, so +60 % may be luck of the draw (a different hash seed would give a different basket); (2) the backfill universe is today's market.csgo feed, so every item is a survivor, which flatters buy-and-hold; (3) the basket is made of cheap items (≤ budget/25), so it may be dominated by a few cheap-item spikes; (4) the median item's 12-month change is −10 % (Home page), far from +60 %. The second-run hash check is also still to do.
