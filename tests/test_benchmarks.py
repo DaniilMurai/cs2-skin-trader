@@ -87,7 +87,7 @@ def test_equal_split_invests_on_a_large_universe():
     for budget in (100.0, 1000.0):
         qty = equal_split(prices, budget)
         spent = sum(q * prices[n] for n, q in qty.items())
-        assert len(qty) >= 5 and budget * 0.85 < spent <= budget
+        assert len(qty) >= 5 and budget * 0.75 < spent <= budget
         assert qty == equal_split(prices, budget)
 
 

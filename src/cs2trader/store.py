@@ -95,6 +95,9 @@ class Store:
             self._create_view(kind)
         self._create_sales_view()
 
+    def close(self) -> None:
+        self.db.close()
+
     def _create_sales_view(self) -> None:
         tree = self.data_dir / "collector" / "sales"
         if any(tree.glob("day=*/*.parquet")):
