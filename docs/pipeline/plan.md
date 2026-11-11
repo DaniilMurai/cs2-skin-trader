@@ -128,6 +128,9 @@ AC-12: Given — the report.
        and its walk-forward Sharpe stays positive after a deflation for the number of
        variants tried. Otherwise **fails**, with the first rule it broke. If none holds
        up, the report's first line says so.
+       Amended 2026-11-11 (after T-49, accepted by the author): "buy-and-hold" in this rule is the
+       basket with the median holdout return among 15 random 25-item baskets (`bh_median`), because one
+       basket ranged from -29% to +169% on the holdout. `bh_universe` (basket 0) is still reported.
 
 AC-13: Given — the same data snapshot and config.
        When — `cs2 report` runs twice.

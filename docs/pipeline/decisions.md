@@ -87,3 +87,10 @@ Open doubts, not yet checked: (1) bh_universe is a 25-item basket picked by name
 | $100 | +3.4% | +6.8% | −21.6% … +45.7% | −29.0% / +111.2% | 57% |
 Cash is −5%. The published +58.5% / +61.9% basket sat near the top of this spread, so "buy and hold beats everything" was a lucky pick, not a market return. Consequence: the benchmark in the verdict rule is noisy; a fair comparison needs the median of many baskets. Not checked: survivorship (items that disappeared are not in the data) and cheap-item price spikes; a few large winners drive the mean far above the median.
 Open: decide whether the verdict benchmark becomes the median of N baskets.
+
+## 2026-11-11 — The verdict benchmark is the median of 15 baskets
+Decision (author, after T-49): AC-12 compares strategies with `bh_median`, the median-return run among
+15 baskets (seed 0 = the old `bh_universe` basket, seeds 1..14 the same hash with a seed prefix; ties go to the
+lower seed). Alternatives: keep one basket (rejected: a lucky basket decides the verdict), mean (rejected: a few
+huge winners dominate it). Cost: 14 extra holdout runs per capital (about 16 s each). The UI shows it as
+"Buy and hold (typical basket)". Needs a full report re-run: the old hash d3ea18d4859fd53e no longer applies.

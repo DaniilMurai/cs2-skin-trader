@@ -18,17 +18,20 @@ class Cash:
         return []
 
 
-def _stable_key(name: str) -> bytes:
-    return hashlib.blake2b(name.encode(), digest_size=8).digest()
+def _stable_key(name: str, seed: int = 0) -> bytes:
+    # Seed 0 keeps the original order, so published bh_universe numbers do not change.
+    text = name if seed == 0 else f"{seed}:{name}"
+    return hashlib.blake2b(text.encode(), digest_size=8).digest()
 
 
-def equal_split(prices: Mapping[str, float], budget: float, max_items: int = 25) -> dict[str, int]:
+def equal_split(prices: Mapping[str, float], budget: float, max_items: int = 25,
+                seed: int = 0) -> dict[str, int]:
     """Equal-dollar basket of up to `max_items` items, picked by a stable name hash among the items
     cheaper than their share. `prices` are expected fill prices.
 
     Dropping every item dearer than the share in one pass emptied the basket on a real universe of
     thousands of items (audit 2026-11-11); a fixed-size basket keeps the share large enough."""
-    order = sorted(prices, key=_stable_key)
+    order = sorted(prices, key=lambda n: _stable_key(n, seed))
     for n in range(min(max_items, len(order)), 0, -1):
         share = budget / n
         eligible = [name for name in order if prices[name] <= share]
@@ -46,6 +49,7 @@ class BuyAndHoldUniverse:
         self.spread = params.get("spread", 0.03)
         self.margin = params.get("margin", 0.02)
         self.retry_days = params.get("retry_days", 10)
+        self.seed = params.get("seed", 0)
         self._targets: dict[str, int] | None = None
         self._days_left = self.retry_days
 
@@ -66,7 +70,7 @@ class BuyAndHoldUniverse:
     def decide(self, market, book) -> list[Order]:
         if self._targets is None:
             prices = self._prices(market, self._candidates(market))
-            targets = {n: q for n, q in equal_split(prices, book.balance).items() if q > 0}
+            targets = {n: q for n, q in equal_split(prices, book.balance, seed=self.seed).items() if q > 0}
             if not targets:
                 return []
             self._targets = targets

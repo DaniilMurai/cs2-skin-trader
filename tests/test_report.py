@@ -83,3 +83,10 @@ def test_chained_walk_forward_applies_the_withdrawal_fee_once(bars):
         ho.filter(pl.col("unit") == "cash")["net_return"][0])
     assert wf.filter(pl.col("unit") == "steam")["net_return"][0] == pytest.approx(
         ho.filter(pl.col("unit") == "steam")["net_return"][0])
+
+
+def test_benchmark_for_the_verdict_is_the_median_of_many_baskets(bars):
+    t = results_table(Store(bars), SETTINGS, ["cash", "bh_universe"])
+    med = t.filter((pl.col("strategy") == "bh_median") & (pl.col("period") == "holdout")
+                   & (pl.col("regime") == "all") & (pl.col("unit") == "cash"))
+    assert sorted(med["capital"]) == [100.0, 1000.0]

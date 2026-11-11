@@ -9,7 +9,7 @@ import polars as pl
 
 from cs2trader.config import Settings
 
-BENCHMARKS = ("cash", "bh_universe", "bh_knives_gloves")
+BENCHMARKS = ("cash", "bh_universe", "bh_median", "bh_knives_gloves")
 
 # AC-12's rules in the order the verdict checks them.
 RULES: dict[str, dict[str, str]] = {
@@ -185,8 +185,18 @@ def became(capital: float, ret: float) -> str:
     return f"{money(capital)} became {money(capital * (1 + ret))} ({pct(ret)})"
 
 
+# Report-only rows that are not registered strategies.
+REPORT_ONLY = {
+    "bh_median": {
+        "label": "Buy and hold (typical basket)",
+        "summary": "The same buy and hold, run on 15 different random baskets; this is the basket with the "
+                   "middle result. One basket can be lucky, so strategies are judged against this one.",
+    },
+}
+
+
 def strategy_label(name: str) -> str:
-    return STRATEGIES.get(name, {}).get("label", name)
+    return {**STRATEGIES, **REPORT_ONLY}.get(name, {}).get("label", name)
 
 
 # ---------------------------------------------------------------- verdict
@@ -232,7 +242,8 @@ def scoreboard(results: pl.DataFrame, verdicts: list[dict] | None, settings: Set
     by_key = {(v["strategy"], float(v["capital"])): v for v in verdicts or []}
     for capital in sorted(results["capital"].unique().to_list()):
         cash = _row(results, "cash", capital, "holdout")
-        bh = _row(results, "bh_universe", capital, "holdout")
+        bh_name = "bh_median" if _row(results, "bh_median", capital, "holdout") is not None else "bh_universe"
+        bh = _row(results, bh_name, capital, "holdout")
         names = [n for n in results.filter(pl.col("capital") == capital)["strategy"].unique().sort().to_list()
                  if n not in BENCHMARKS]
         names += [s for (s, c) in by_key if c == capital and s not in names and s not in BENCHMARKS]
@@ -273,7 +284,7 @@ def scoreboard(results: pl.DataFrame, verdicts: list[dict] | None, settings: Set
         # Passing strategies first, then by result: the reader wants the best news at the top.
         cards.sort(key=lambda c: (c["status"] != "holds_up", -(c["net_return"] if c["net_return"] is not None else -9)))
         bench = {}
-        for key, name in (("cash", "cash"), ("bh", "bh_universe")):
+        for key, name in (("cash", "cash"), ("bh", bh_name)):
             r = cash if key == "cash" else bh
             bench[key] = None if r is None else {
                 "strategy": name, "label": strategy_label(name), "net_return": r["net_return"],

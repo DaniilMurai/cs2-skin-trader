@@ -102,3 +102,12 @@ def test_window_without_bars_is_a_clear_error():
     spec = RunSpec("cash", {}, 100.0, date(2010, 1, 1), date(2010, 3, 1), fills=FILLS)
     with pytest.raises(Cs2Error, match="no bars"):
         run(spec, FakeStore(bars()))
+
+
+def test_seed_changes_the_basket_and_seed_zero_keeps_the_old_one():
+    from cs2trader.strategies.benchmarks import equal_split
+
+    prices = {f"item {i}": 1.0 + i / 100 for i in range(200)}
+    base = equal_split(prices, 1000.0)
+    assert base == equal_split(prices, 1000.0, seed=0)
+    assert set(equal_split(prices, 1000.0, seed=1)) != set(base)

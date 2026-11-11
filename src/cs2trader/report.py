@@ -16,6 +16,7 @@ from cs2trader.config import Settings, load_settings
 from cs2trader.evaluate import (
     WalkForwardResult,
     holdout_spec,
+    make_spec,
     metrics,
     walk_forward,
 )
@@ -32,6 +33,8 @@ REGIME_ORDER = ["all", "rising", "falling", "flat"]
 PERIODS = ["walk_forward", "holdout", "holdout_stress"]
 HASH_DECIMALS = 9
 REQUIRED = ("cash", "bh_universe")
+BASKETS = 15
+MEDIAN_NAME = "bh_median"
 SCHEMA = {"strategy": pl.String, "capital": pl.Float64, "period": pl.String, "regime": pl.String,
           "unit": pl.String, "net_return": pl.Float64, "max_drawdown": pl.Float64,
           "n_trades": pl.Int64, "fees_paid": pl.Float64, "sharpe": pl.Float64}
@@ -120,7 +123,11 @@ def evaluate_all(store: Store, settings: Settings, strategies: list[str] | None 
         wf = walk_forward(entry, capital, store, wf_s, settings, runner=runner)
         ho = runner.submit_run(holdout_spec(entry, wf.chosen_params, capital, wf_s, end, False, settings))
         ho_s = runner.submit_run(holdout_spec(entry, wf.chosen_params, capital, wf_s, end, True, settings))
-        out = wf, ho.result(), ho_s.result()
+        extra = []
+        if name == "bh_universe":
+            extra = [runner.submit_run(make_spec(name, {"seed": k}, capital, wf_s.holdout_start, end, settings))
+                     for k in range(1, BASKETS)]
+        out = wf, ho.result(), ho_s.result(), [f.result() for f in extra]
         done.append(name)
         if progress:
             print(f"[{len(done)}/{len(combos)}] {name} ${capital:,.0f} done, "
@@ -138,7 +145,7 @@ def evaluate_all(store: Store, settings: Settings, strategies: list[str] | None 
     rows: list[dict] = []
     verdicts: list[Verdict] = []
     ho_runs: dict[float, dict[str, RunResult]] = {c: {} for c in settings.capitals}
-    for (capital, name), (wf, ho, ho_s) in zip(combos, results):
+    for (capital, name), (wf, ho, ho_s, baskets) in zip(combos, results):
         entry = REGISTRY[name]
         for i, res in enumerate(wf.test_runs):
             rows += _rows(name, capital, f"{FOLD_PREFIX}{i:02d}", "all", metrics(res))
@@ -147,6 +154,13 @@ def evaluate_all(store: Store, settings: Settings, strategies: list[str] | None 
         rows += _period_rows(name, capital, "holdout", ho, regimes)
         rows += _period_rows(name, capital, "holdout_stress", ho_s, regimes)
         ho_runs[capital][name] = ho
+        if baskets:
+            # One random 25-item basket is a lottery ticket (T-49): the benchmark is the basket with the
+            # median holdout return of BASKETS baskets; ties go to the lower seed.
+            ranked = sorted(enumerate([ho, *baskets]), key=lambda kv: (metrics(kv[1]).net_return_cash, kv[0]))
+            median = ranked[len(ranked) // 2][1]
+            rows += _period_rows(MEDIAN_NAME, capital, "holdout", median, regimes)
+            ho_runs[capital][MEDIAN_NAME] = median
         if entry.family != "benchmark":
             verdicts.append(_verdict(name, capital, wf, ho, ho_s, ho_runs[capital]))
     return Evaluation(pl.DataFrame(rows, schema=SCHEMA).sort(KEY), verdicts)
@@ -156,7 +170,7 @@ def _verdict(name: str, capital: float, wf: WalkForwardResult, ho: RunResult, ho
              ho_runs: dict[str, RunResult]) -> Verdict:
     from cs2trader.evaluate import verdict
 
-    return verdict(name, capital, wf, ho, ho_s, ho_runs["bh_universe"], ho_runs["cash"])
+    return verdict(name, capital, wf, ho, ho_s, ho_runs[MEDIAN_NAME], ho_runs["cash"])
 
 
 def results_table(store: Store, settings: Settings | None = None,
