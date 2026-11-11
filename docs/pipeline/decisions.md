@@ -78,3 +78,12 @@ Holdout 2025-10-01 → 2026-11-10, cash-out units. Verdict: **no strategy holds 
 | xs_momentum | −96.1 % | −99.8 % |
 
 Open doubts, not yet checked: (1) bh_universe is a 25-item basket picked by name hash, so +60 % may be luck of the draw (a different hash seed would give a different basket); (2) the backfill universe is today's market.csgo feed, so every item is a survivor, which flatters buy-and-hold; (3) the basket is made of cheap items (≤ budget/25), so it may be dominated by a few cheap-item spikes; (4) the median item's 12-month change is −10 % (Home page), far from +60 %. The second-run hash check is also still to do.
+
+## 2026-11-11 — T-49: the bh_universe +60% was basket luck
+30 other hash orders of the 25-item basket, holdout 2025-10-01…2026-11-10, cash-out units:
+| capital | median | mean | 10th–90th pct | min / max | share above 0 |
+|---|---|---|---|---|---|
+| $1,000 | 0.0% | +13.1% | −20.8% … +64.7% | −29.4% / +168.9% | 50% |
+| $100 | +3.4% | +6.8% | −21.6% … +45.7% | −29.0% / +111.2% | 57% |
+Cash is −5%. The published +58.5% / +61.9% basket sat near the top of this spread, so "buy and hold beats everything" was a lucky pick, not a market return. Consequence: the benchmark in the verdict rule is noisy; a fair comparison needs the median of many baskets. Not checked: survivorship (items that disappeared are not in the data) and cheap-item price spikes; a few large winners drive the mean far above the median.
+Open: decide whether the verdict benchmark becomes the median of N baskets.
