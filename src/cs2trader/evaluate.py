@@ -1,5 +1,6 @@
 import json
 import math
+import threading
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import date, timedelta
@@ -13,6 +14,7 @@ from cs2trader.backtest.engine import load_market, run
 from cs2trader.backtest.view import MarketData
 from cs2trader.config import Settings, WfSettings, load_settings
 from cs2trader.models import FillModel, Metrics, Regime, RunResult, RunSpec, Verdict
+from cs2trader.parallel import LocalRunner
 from cs2trader.store import Store
 from cs2trader.strategies.registry import StrategyEntry
 
@@ -120,6 +122,7 @@ class WalkForwardResult:
     n_variants: int
     trial_sharpes: tuple[float, ...] = ()   # daily (not annualised) cash Sharpe of every tuning run
     test_returns: tuple[float, ...] = ()    # daily cash returns of the test windows, chained in order
+    test_runs: tuple[RunResult, ...] = ()   # the fold test runs, so callers need not repeat them
 
 
 def grid_variants(grid: Mapping[str, Sequence[Any]]) -> list[dict[str, Any]]:
@@ -168,27 +171,53 @@ def _choose(entry: StrategyEntry, capital: float, start: date, end: date, store:
     return best
 
 
-def walk_forward(entry: StrategyEntry, capital: float, store: Store, s: WfSettings,
-                 settings: Settings | None = None, data: MarketData | None = None) -> WalkForwardResult:
-    """Tune on each train window by cash Sharpe, test the winner on the next window, then tune
-    once more on the `train_days` before the holdout for the params the holdout uses. Nothing
-    on or after `s.holdout_start` is loaded."""
-    settings = settings or load_settings()
-    last_tuned = s.holdout_start - timedelta(days=1)
-    data = data or load_market(store, s.start, min(s.end, last_tuned), settings)
+def tune(entry: StrategyEntry, capital: float, start: date, end: date, fold: int, store: Store,
+         settings: Settings, data: MarketData) -> tuple[dict[str, Any], list, list[float]]:
     log: list = []
     sharpes: list[float] = []
-    test_returns: list[float] = []
-    out = []
-    for i, (tr0, tr1, te0, te1) in enumerate(folds(s)):
-        params = _choose(entry, capital, tr0, tr1, store, settings, data, i, log, sharpes)
-        res = run(make_spec(entry.name, params, capital, te0, te1, settings), store, settings, data)
-        test_returns += _returns(res.equity["equity_cash"].to_list())
-        out.append((te0, te1, params, metrics(res)))
+    params = _choose(entry, capital, start, end, store, settings, data, fold, log, sharpes)
+    return params, log, sharpes
+
+
+_DB_LOCK = threading.Lock()
+
+
+def walk_forward(entry: StrategyEntry, capital: float, store: Store, s: WfSettings,
+                 settings: Settings | None = None, data: MarketData | None = None,
+                 runner: Any = None) -> WalkForwardResult:
+    """Tune on each train window by cash Sharpe, test the winner on the next window, then tune
+    once more on the `train_days` before the holdout for the params the holdout uses. Nothing
+    on or after `s.holdout_start` is loaded. `runner` decides where the runs execute (this
+    process by default); the windows are independent, so the result does not depend on it."""
+    settings = settings or load_settings()
+    last_tuned = s.holdout_start - timedelta(days=1)
+    if runner is None:
+        data = data or load_market(store, s.start, min(s.end, last_tuned), settings)
+        runner = LocalRunner(store, settings, data)
+    fold_windows = folds(s)
     final_start = s.holdout_start - timedelta(days=s.train_days)
-    chosen = _choose(entry, capital, final_start, last_tuned, store, settings, data, len(out), log, sharpes)
-    store.record_variants(log)
-    return WalkForwardResult(tuple(out), chosen, len(log), tuple(sharpes), tuple(test_returns))
+    windows = [(tr0, tr1) for tr0, tr1, _, _ in fold_windows] + [(final_start, last_tuned)]
+    tuned = [f.result() for f in [runner.submit_tune(entry, capital, a, b, i) for i, (a, b) in enumerate(windows)]]
+    tests = [runner.submit_run(make_spec(entry.name, tuned[i][0], capital, te0, te1, settings))
+             for i, (_, _, te0, te1) in enumerate(fold_windows)]
+    log = [row for _, rows, _ in tuned for row in rows]
+    sharpes = [x for _, _, xs in tuned for x in xs]
+    test_returns: list[float] = []
+    out, test_runs = [], []
+    for i, (_, _, te0, te1) in enumerate(fold_windows):
+        res = tests[i].result()
+        test_returns += _returns(res.equity["equity_cash"].to_list())
+        out.append((te0, te1, tuned[i][0], metrics(res)))
+        test_runs.append(res)
+    with _DB_LOCK:
+        store.record_variants(log)
+    return WalkForwardResult(tuple(out), tuned[-1][0], len(log), tuple(sharpes), tuple(test_returns),
+                             tuple(test_runs))
+
+
+def holdout_spec(entry: StrategyEntry, params: Mapping[str, Any], capital: float, s: WfSettings,
+                 end: date, stress: bool, settings: Settings) -> RunSpec:
+    return make_spec(entry.name, params, capital, s.holdout_start, end, settings, stress)
 
 
 def holdout(entry: StrategyEntry, params: Mapping[str, Any], capital: float, store: Store,

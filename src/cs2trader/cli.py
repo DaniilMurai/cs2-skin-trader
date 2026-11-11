@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 import re
 import sys
 from datetime import UTC, date, datetime, timedelta
@@ -45,7 +46,6 @@ def cmd_fx_update(args: argparse.Namespace) -> None:
 def cmd_backfill_steam(args: argparse.Namespace) -> None:
     settings = load_settings()
     store = Store(settings.data_dir)
-    rate = store.fx(datetime.now(UTC).date(), "UAH")
     universe = args.names or settings.backfill.universe
     names = feed_universe(store) if universe == "feed" else read_names(Path(universe))
     client = steam.SteamClient(
@@ -53,7 +53,8 @@ def cmd_backfill_steam(args: argparse.Namespace) -> None:
         max_retries=settings.steam.max_retries, backoff_s=settings.steam.backoff_s,
         on_request=request_logger(settings.data_dir / "logs" / "steam_requests.tsv"))
     try:
-        rep = backfill(store, client, names, rate, refresh=args.refresh, limit=args.limit,
+        rep = backfill(store, client, names, lambda: store.fx(datetime.now(UTC).date(), "UAH"),
+                       refresh=args.refresh, limit=args.limit,
                        stop_after_errors=settings.steam.stop_after_errors)
     except SteamAuthError:
         print("refresh STEAM_LOGIN_SECURE in .env and re-run; stored items are kept", file=sys.stderr)
@@ -134,7 +135,7 @@ def cmd_report(args: argparse.Namespace) -> None:
 
     settings = load_settings()
     names = [n.strip() for n in args.strategies.split(",") if n.strip()] if args.strategies else None
-    path = build_report(Store(settings.data_dir), settings.reports_dir, settings, names)
+    path = build_report(Store(settings.data_dir), settings.reports_dir, settings, names, args.jobs, progress=True)
     first = path.read_text().split("\n", 1)[0]
     digest = re.search(r"Results hash: <code>(\w+)</code>", path.read_text()).group(1)
     print(f"report: {path}\nresults hash: {digest}\n{re.search('<h1>(.*?)</h1>', first).group(1)}")
@@ -225,6 +226,8 @@ def main() -> None:
 
     rp = sub.add_parser("report")
     rp.add_argument("--strategies", help="comma-separated subset; cash and bh_universe are always included")
+    rp.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) - 2),
+                    help="worker processes (1 = in this process); results are identical either way")
     rp.set_defaults(func=cmd_report)
 
     sub.add_parser("strategies").set_defaults(func=cmd_strategies)

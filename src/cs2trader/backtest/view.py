@@ -1,6 +1,9 @@
 import bisect
+import pickle
 from collections.abc import Sequence
 from datetime import date, timedelta
+from itertools import accumulate
+from pathlib import Path
 from typing import Literal, Protocol
 
 import polars as pl
@@ -48,6 +51,26 @@ class MarketData:
         self.regimes: dict[date, str] = dict(zip(labels["t"].to_list(), labels["regime"].to_list()))
         self._universe: dict[date, list[str]] = {}
         self._empty = bars.clear()
+
+    def export(self, directory: Path) -> None:
+        """Write the market so worker processes can attach to it without each holding a copy:
+        the per-day bars as one Arrow file that every worker memory-maps (the OS shares those
+        pages), everything small as a pickle."""
+        sizes = [self.by_day[d].height for d in self.days]
+        pl.concat([self.by_day[d] for d in self.days]).write_ipc(directory / "bars.arrow", compression="uncompressed")
+        small = {k: v for k, v in self.__dict__.items() if k not in ("by_day", "_universe")}
+        (directory / "market.pkl").write_bytes(pickle.dumps((small, sizes)))
+
+    @classmethod
+    def attach(cls, directory: Path) -> "MarketData":
+        small, sizes = pickle.loads((directory / "market.pkl").read_bytes())
+        self = cls.__new__(cls)
+        self.__dict__.update(small)
+        bars = pl.read_ipc(directory / "bars.arrow")
+        starts = [0, *accumulate(sizes)]
+        self.by_day = {d: bars.slice(starts[i], sizes[i]) for i, d in enumerate(self.days)}
+        self._universe = {}
+        return self
 
     def window(self, now: date, lookback: int) -> pl.DataFrame:
         frames = [self.by_day[d] for d in self._days_in(now - timedelta(days=lookback), now)]

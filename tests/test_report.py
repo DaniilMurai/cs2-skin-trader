@@ -61,3 +61,25 @@ def test_hash_is_reproducible_and_html_has_ac11_columns(bars, tmp_path):
 
 def test_summary_line():
     assert summary_line([], [100.0, 1000.0]) == "No strategy holds up at $100 / $1,000"
+
+
+def test_worker_processes_give_the_same_results(bars):
+    # The toy strategy lives only in this process's registry, so the workers get registry strategies only.
+    names = ["cash", "bh_universe", "mean_reversion"]
+    one = results_table(Store(bars), SETTINGS, names, jobs=1)
+    two = results_table(Store(bars), SETTINGS, names, jobs=2)
+    assert results_hash(one) == results_hash(two)
+    assert one.equals(two)
+
+
+def test_chained_walk_forward_applies_the_withdrawal_fee_once(bars):
+    t = results_table(Store(bars), SETTINGS, ["cash"])
+    wf = t.filter((pl.col("strategy") == "cash") & (pl.col("period") == "walk_forward")
+                  & (pl.col("regime") == "all") & (pl.col("capital") == 1000.0))
+    ho = t.filter((pl.col("strategy") == "cash") & (pl.col("period") == "holdout")
+                  & (pl.col("regime") == "all") & (pl.col("capital") == 1000.0))
+    # Holding cash over any span costs the one withdrawal haircut, however many folds it is cut into.
+    assert wf.filter(pl.col("unit") == "cash")["net_return"][0] == pytest.approx(
+        ho.filter(pl.col("unit") == "cash")["net_return"][0])
+    assert wf.filter(pl.col("unit") == "steam")["net_return"][0] == pytest.approx(
+        ho.filter(pl.col("unit") == "steam")["net_return"][0])

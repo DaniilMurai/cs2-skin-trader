@@ -161,7 +161,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: subagent
       Depends on: T-11, T-12
 
-- [ ] T-14 — Full Steam backfill run (operational, ~19 h) *(running since 2026-11-09 ~16:00 UTC in data/backfill/, merged into data/ when done)*
+- [x] T-14 — Full Steam backfill run (operational) *(finished and merged 2026-11-10; `cs2 data check --categories` exits 0)*
       Files: — (data only)
       Do: `cs2 fx update`, then `cs2 backfill steam` over the feed universe in the background,
           resuming after cookie expiry (author refreshes `STEAM_LOGIN_SECURE`)
@@ -251,7 +251,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: subagent
       Depends on: T-20
 
-- [ ] T-22 — V1 "falling market": dip buying in knives/gloves *(code and tests done 2026-11-09; the 2019–2025 run waits for T-14)*
+- [x] T-22 — V1 "falling market": dip buying in knives/gloves *(code and tests done 2026-11-09; the 2019–2025 run waits for T-14)*
       Files: src/cs2trader/strategies/video.py, src/cs2trader/strategies/registry.py,
              tests/test_v1.py
       Do: write the rule spec (entry on a 7-day drop, liquidity filter, sizing, exit,
@@ -263,7 +263,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: main loop
       Depends on: T-21
 
-- [ ] T-23 — V2 "rising market": category momentum *(code and tests done 2026-11-09; the 2019–2025 run waits for T-14)*
+- [x] T-23 — V2 "rising market": category momentum *(code and tests done 2026-11-09; the 2019–2025 run waits for T-14)*
       Files: src/cs2trader/strategies/video.py, src/cs2trader/strategies/registry.py,
              tests/test_v2.py
       Do: rule spec (category growth window, top-k categories, how "buy more actively"
@@ -306,7 +306,7 @@ Until then they are skipped and the next task in order is taken.
 
 - [x] T-27 — Spike S-09: event calendar source *(answered 2026-11-09: partly — spikes/FINDINGS.md S-09)*
 
-- [ ] T-27a — Curated event list `docs/pipeline/events.csv` *(list, loader, builders and tests done 2026-11-09; the 90% first-point check waits for T-14)*
+- [x] T-27a — Curated event list `docs/pipeline/events.csv` *(first-point check 2026-11-10: 39/42 case releases = 92.9% within 7 days; misses: two 2013 cases before Steam history, Gallery Case +8 d)*
       Files: docs/pipeline/events.csv, src/cs2trader/market/events.py, tests/test_events.py
       Do: hand-curated rows (date, type, name, source_url): 25 Majors (start, end) from the
           Wikipedia table via the MediaWiki API; ~45 case releases and drop-pool exits
@@ -375,7 +375,7 @@ Until then they are skipped and the next task in order is taken.
 
 ## F2. Follow-ups found during implementation
 
-- [ ] T-33 — Full report run time
+- [x] T-33 — Full report run time *(2026-11-10: 57 min with `--jobs 8`, was ~10 h single-process; two runs gave hash c1c2074822aba264)*
       Files: src/cs2trader/evaluate.py, src/cs2trader/report.py
       Do: a full `cs2 report` runs every grid point in 25 tuning windows × 2 capitals (V1 alone:
           72 × 25 × 2 = 3,600 runs); with the real ~27k-item data it will take hours. Measure on

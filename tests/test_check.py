@@ -52,14 +52,30 @@ def test_coverage_fails(tmp_path):
     assert not res.ok and "unfetched 1" in res.detail
 
 
-def test_first_date_fails_before_release_and_too_late(tmp_path):
+def test_first_date_is_a_rule_on_the_whole_set(tmp_path):
     store = good_store(tmp_path)
     store.db.execute("UPDATE items SET release_date = DATE '2024-02-01' WHERE name = 'Recoil Case'")
     assert run(store)["first_date"].ok  # case dates in the DB are unreliable (S-09): skipped
-    store.db.execute("UPDATE items SET release_date = DATE '2024-02-01' WHERE name LIKE 'Sticker%'")
-    assert not run(store)["first_date"].ok
-    store.db.execute("UPDATE items SET release_date = DATE '2023-12-01' WHERE name LIKE 'Sticker%'")
-    assert not run(store)["first_date"].ok
+    store.db.execute("UPDATE items SET release_date = DATE '2024-02-01'")
+    res = run(store)["first_date"]
+    assert not res.ok and "100.0%" in res.detail  # every first point is before its release
+    store.db.execute("UPDATE items SET release_date = DATE '2023-12-01'")
+    assert not run(store)["first_date"].ok  # median first point is 31 days after release
+
+
+def test_first_date_tolerates_a_few_noisy_items(tmp_path):
+    store = good_store(tmp_path)
+    fx = FxRate(FETCH_DAY, "UAH", 40.0, "nbu", False)
+    extra = [f"Extra {i:02d}" for i in range(19)]
+    for name in extra:
+        store.upsert_steam([SteamPoint(name, datetime(2024, 1, 1, tzinfo=UTC), 400.0, "UAH", 3, "day")], fx)
+        store.db.execute("INSERT INTO items (name, category, release_date) VALUES (?, 'weapon_skin', DATE '2024-01-01')",
+                         [name])
+    universe = [*UNIVERSE, *extra]
+    store.db.execute("UPDATE items SET release_date = DATE '2024-02-01' WHERE name IN ('Extra 00', 'Extra 01')")
+    assert run(store, universe=universe)["first_date"].ok  # 2 of 20 early: within the 10% share
+    store.db.execute("UPDATE items SET release_date = DATE '2024-02-01' WHERE name = 'Extra 02'")
+    assert not run(store, universe=universe)["first_date"].ok  # 3 of 20 = 15%
 
 
 def test_first_date_skips_unknown_release(tmp_path):
@@ -96,8 +112,8 @@ def write_log(path: Path, n: int, spacing_s: float) -> Path:
 
 def test_request_rate(tmp_path):
     store = good_store(tmp_path / "db")
-    assert run(store, write_log(tmp_path / "ok.tsv", 100, 2.6))["request_rate"].ok  # 24 per 60 s
-    assert not run(store, write_log(tmp_path / "fast.tsv", 100, 2.0))["request_rate"].ok  # 30 per 60 s
+    assert run(store, write_log(tmp_path / "ok.tsv", 200, 1.0))["request_rate"].ok  # 60 per 60 s
+    assert not run(store, write_log(tmp_path / "fast.tsv", 200, 0.8))["request_rate"].ok  # 75 per 60 s
     missing = run(store, tmp_path / "none.tsv")["request_rate"]
     assert missing.ok and missing.detail == "no log"
 

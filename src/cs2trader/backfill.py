@@ -36,7 +36,7 @@ def read_names(path: Path) -> list[str]:
     return [n.strip() for n in path.read_text().splitlines() if n.strip()]
 
 
-def backfill(store: Store, source: HistorySource, names: Sequence[str], fx: FxRate, *,
+def backfill(store: Store, source: HistorySource, names: Sequence[str], fx: FxRate | Callable[[], FxRate], *,
              refresh: bool = False, limit: int | None = None, stop_after_errors: int = 10,
              echo: Callable[[str], None] = print) -> BackfillReport:
     done = set() if refresh else store.fetched_names()
@@ -61,7 +61,8 @@ def backfill(store: Store, source: HistorySource, names: Sequence[str], fx: FxRa
                 raise SourceUnavailable("steam", f"{in_a_row} items failed in a row, stopping") from e
             continue
         in_a_row = 0
-        store.upsert_steam(points, fx)
+        # called per item: a run that crosses midnight must switch to the new day's rate
+        store.upsert_steam(points, fx() if callable(fx) else fx)
         store.mark_fetched(name, "ok", len(points))
         ok += 1
         echo(f"ok    {name}: {len(points)} points, {points[0].ts:%Y-%m-%d} → {points[-1].ts:%Y-%m-%d}")

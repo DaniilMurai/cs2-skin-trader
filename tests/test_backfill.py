@@ -160,3 +160,11 @@ def test_merge_from_other_store(tmp_path):
     assert counts == {"steam_points": 9, "steam_fetch_log": 3}
     assert main.fetched_names() == set(NAMES[:4])
     assert count(main) == 12
+
+
+def test_rate_is_looked_up_per_item_so_a_run_can_cross_midnight(tmp_path):
+    store = Store(tmp_path / "s")
+    rates = iter([FX, FxRate(date(2026, 11, 10), "UAH", 45.0, "nbu", False)])
+    backfill(store, FakeSource(), NAMES[:2], lambda: next(rates), echo=lambda _: None)
+    days = store.db.execute("SELECT name, fx_day FROM steam_points GROUP BY ALL ORDER BY name").fetchall()
+    assert days == [(NAMES[0], date(2026, 11, 9)), (NAMES[1], date(2026, 11, 10))]
