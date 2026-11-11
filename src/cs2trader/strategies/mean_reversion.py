@@ -22,15 +22,17 @@ MR_GRID = {
     "lookback": [14, 30],
 }
 
-MR_DEFAULTS = {"z": 2.0, "lookback": 30, "max_positions": 5, "max_hold": 30, "cooldown": 7, "spread": 0.03}
+MR_DEFAULTS = {"z": 2.0, "lookback": 30, "max_positions": 5, "max_hold": 30, "cooldown": 7, "spread": 0.03,
+               "max_price": math.inf, "min_move": 0.0}
 
 
 class MeanReversion:
     name = "mean_reversion"
+    defaults: Mapping[str, Any] = MR_DEFAULTS
 
     def __init__(self, params: Mapping[str, Any]) -> None:
         self.params = params
-        self.p = {**MR_DEFAULTS, **params}
+        self.p = {**self.defaults, **params}
         self.exited: dict[str, object] = {}
         self.entry_mean: dict[str, float] = {}
 
@@ -71,7 +73,8 @@ class MeanReversion:
                                     schema={"market_hash_name": pl.String, "price": pl.Float64}),
                        on="market_hash_name")
                  .with_columns(((pl.col("price") - pl.col("mean")) / pl.col("std")).alias("zscore"))
-                 .filter(pl.col("zscore") <= -p["z"])
+                 .filter((pl.col("zscore") <= -p["z"]) & (pl.col("price") <= p["max_price"])
+                         & (pl.col("mean") / pl.col("price") - 1 >= p["min_move"]))
                  .sort("zscore", "market_hash_name"))
 
         equity = book.balance + sum(l.qty * today.get(l.market_hash_name, l.unit_cost) for ls in held.values()

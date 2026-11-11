@@ -85,6 +85,21 @@ STRATEGIES: dict[str, dict[str, str]] = {
         "summary": "Buy a skin when its price falls unusually far below its own recent average, betting it "
                    "bounces back; sell when it returns to that average or after a maximum holding time.",
     },
+    "quality_basket": {
+        "label": "Hold liquid, growing items (quality basket)",
+        "summary": "Pick the items that trade the most and whose trading is not shrinking, hold them, and "
+                   "re-pick only every few months, so fees are paid rarely.",
+    },
+    "case_dip": {
+        "label": "Buy cases in a falling market",
+        "summary": "While the whole market is falling, buy the most-traded cases; sell them once the market "
+                   "is rising again.",
+    },
+    "cheap_reversion": {
+        "label": "Buy cheap overshoots (cheap mean reversion)",
+        "summary": "Like “buy overshoots”, but only for cheap skins that have to rise at least a set amount "
+                   "to get back to normal, so that the round-trip fees of about 11 % can be earned back.",
+    },
     "event": {
         "label": "Trade around events",
         "summary": "Trade around known calendar events: hold a Major tournament's sticker capsules around "
@@ -93,7 +108,8 @@ STRATEGIES: dict[str, dict[str, str]] = {
 }
 
 FAMILIES = {"benchmark": "Yardstick, not a strategy", "video": "From the video", "trend": "Trend following",
-            "momentum": "Momentum", "mean_reversion": "Mean reversion", "event": "Events"}
+            "momentum": "Momentum", "mean_reversion": "Mean reversion", "event": "Events",
+            "low_turnover": "Few trades"}
 
 # (strategy, key) -> (label, unit, help). unit: "share" = a fraction shown as a percent, "days", "count", "".
 PARAMS: dict[tuple[str, str], tuple[str, str, str]] = {
@@ -111,6 +127,12 @@ PARAMS: dict[tuple[str, str], tuple[str, str, str]] = {
     ("xs_momentum", "rebalance"): ("Re-rank every", "days", "How often the ranking is refreshed."),
     ("trend_ma", "ma_days"): ("Average the market over", "days", "The market must be above its average of this many days to stay invested. Longer = slower to react."),
     ("trend_ma", "n_items"): ("Items held", "count", "How many of the most-traded items are held while invested."),
+    ("quality_basket", "rebalance_days"): ("Re-pick the items every", "days", "How often the basket is chosen again."),
+    ("quality_basket", "n_items"): ("Items held", "count", "The number of items in the basket."),
+    ("case_dip", "n_cases"): ("Cases held", "count", "How many different cases are bought."),
+    ("case_dip", "min_hold"): ("Sell no earlier than", "days", "A case is held at least this long before a rising market sells it."),
+    ("cheap_reversion", "z"): ("How unusual the drop must be", "", "In standard deviations below the recent average: 2 is a rare drop, 3 a very rare one."),
+    ("cheap_reversion", "min_move"): ("Expected rise of at least", "share", "The average it should return to must be this far above the price."),
     ("mean_reversion", "z"): ("How unusual the drop must be", "", "In standard deviations below the recent average: 2 is a rare drop, 3 a very rare one."),
     ("mean_reversion", "lookback"): ("Recent average over", "days", "The period used for an item's normal price and its normal swings."),
     ("event", "rule"): ("Which events", "", "majors = tournament sticker capsules; cases = cases leaving the active drop pool."),

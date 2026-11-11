@@ -94,3 +94,18 @@ Decision (author, after T-49): AC-12 compares strategies with `bh_median`, the m
 lower seed). Alternatives: keep one basket (rejected: a lucky basket decides the verdict), mean (rejected: a few
 huge winners dominate it). Cost: 14 extra holdout runs per capital (about 16 s each). The UI shows it as
 "Buy and hold (typical basket)". Needs a full report re-run: the old hash d3ea18d4859fd53e no longer applies.
+
+## 2026-11-11 — T-48: three low-turnover strategies, all fail
+Holdout 2025-10-01…2026-11-10, cash-out units, walk-forward chose the parameters; benchmark = `bh_median` (new rule).
+| strategy | $100 | $1,000 | fees $100 / $1,000 | verdict |
+|---|---|---|---|---|
+| quality_basket | −54.6% | −53.9% | 2.1 / 19.4 | fails beats_cash |
+| case_dip | −64.4% | −58.6% | 6.3 / 66.8 | fails beats_cash |
+| cheap_reversion | −32.6% | −19.0% | 43.4 / 30.7 | fails beats_cash |
+| bh_median (benchmark) | +3.6% | −7.0% | - | |
+| cash | −5.0% | −5.0% | - | |
+Deflated Sharpe is negative for all three (−2.7 to −5.2). Fees are small for quality_basket and case_dip, so
+their losses are price falls of the items they hold, not trading costs; cheap_reversion loses mostly to fees and
+bad entries. Design note: the first quality_basket re-picked 7-10 of 10 items per quarter and paid 46% of capital
+in fees on 2023-24; a keep-while-in-top-2n rule (also stated in its spec) cut that to 6%. That change was made
+looking at 2023-24 data, not the holdout. Not a full report: the T-50 run will include these strategies.

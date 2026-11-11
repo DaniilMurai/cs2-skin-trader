@@ -511,7 +511,7 @@ request and never keeps the file open; anything that writes runs as a subprocess
 
 - [ ] T-47 — Wallet arbitrage paper test: from the hourly snapshots, log every hour the (Steam/1.15)/ask edge per item with the Steam volume cap, and report the realistic daily profit on $100 and $1,000 in wallet units *(needs ≥ 14 days of snapshots, ~2026-11-24)*
       Executor: main loop
-- [ ] T-48 — New low-turnover strategies, backtested on the walk-forward first, holdout once: (a) quality basket of items with the longest price history and rising volume, rebalanced quarterly; (b) buy cases when the index is `falling`, hold; (c) cheap-item mean reversion with a minimum 15% expected move
+- [x] T-48 — New low-turnover strategies, backtested on the walk-forward first, holdout once: (a) quality basket of items with the longest price history and rising volume, rebalanced quarterly; (b) buy cases when the index is `falling`, hold; (c) cheap-item mean reversion with a minimum 15% expected move *(2026-11-11: quality_basket, case_dip, cheap_reversion built, 268 tests; all three fail beats_cash on the holdout at $100 and $1,000)*
       Executor: main loop
 - [x] T-49 — Check the bh_universe +60% (other hash seeds, only items alive at the start) before any strategy is compared with it *(2026-11-11: 30 seeds, median 0% at $1,000 and +3.4% at $100; the +60% was luck)*
       Executor: subagent

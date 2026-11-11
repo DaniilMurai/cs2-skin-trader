@@ -9,6 +9,17 @@ from cs2trader.strategies.benchmarks import (
     Cash,
 )
 from cs2trader.strategies.event import EVENT_GRID, EVENT_SPEC, EventStrategy
+from cs2trader.strategies.lowturn import (
+    CASEDIP_GRID,
+    CASEDIP_SPEC,
+    CHEAP_GRID,
+    CHEAP_SPEC,
+    QUALITY_GRID,
+    QUALITY_SPEC,
+    CaseDip,
+    CheapReversion,
+    QualityBasket,
+)
 from cs2trader.strategies.mean_reversion import MR_GRID, MR_SPEC, MeanReversion
 from cs2trader.strategies.momentum import XS_GRID, XS_SPEC, XsMomentum
 from cs2trader.strategies.trend import TREND_GRID, TREND_SPEC, TrendFollow
@@ -25,7 +36,7 @@ from cs2trader.strategies.video import (
 @dataclass(frozen=True)
 class StrategyEntry:
     name: str
-    family: Literal["video", "trend", "momentum", "mean_reversion", "event", "benchmark"]
+    family: Literal["video", "trend", "momentum", "mean_reversion", "event", "low_turnover", "benchmark"]
     factory: Callable[[Mapping[str, Any]], Strategy]
     grid: Mapping[str, Sequence[Any]]
     spec_md: str
@@ -61,4 +72,7 @@ REGISTRY: Mapping[str, StrategyEntry] = {
     "event": StrategyEntry("event", "event", EventStrategy, EVENT_GRID, EVENT_SPEC),
     "trend_ma": StrategyEntry("trend_ma", "trend", TrendFollow, TREND_GRID, TREND_SPEC),
     "mean_reversion": StrategyEntry("mean_reversion", "mean_reversion", MeanReversion, MR_GRID, MR_SPEC),
+    "quality_basket": StrategyEntry("quality_basket", "low_turnover", QualityBasket, QUALITY_GRID, QUALITY_SPEC),
+    "case_dip": StrategyEntry("case_dip", "low_turnover", CaseDip, CASEDIP_GRID, CASEDIP_SPEC),
+    "cheap_reversion": StrategyEntry("cheap_reversion", "mean_reversion", CheapReversion, CHEAP_GRID, CHEAP_SPEC),
 }
