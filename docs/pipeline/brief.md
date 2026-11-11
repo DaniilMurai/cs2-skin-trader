@@ -148,6 +148,7 @@ uv run cs2 data check --categories        # AC-1/AC-4 checks, exit 6 on failure
 uv run cs2 regimes                        # market index regime labels → regimes table
 uv run cs2 strategies                     # registry: name, family, grid
 uv run cs2 backtest --strategy bh_universe --capital 1000 --from 2024-01-01 --to 2025-09-30 [--params JSON]
+uv run cs2 ui                             # local web UI on http://127.0.0.1:8765 (verdict, runs, market, collector, settings)
 uv run cs2 report --strategies mean_reversion   # walk-forward + holdout + verdicts → reports/<date>/report.html
 ```
 

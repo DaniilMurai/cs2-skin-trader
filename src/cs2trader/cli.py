@@ -133,6 +133,12 @@ def cmd_regimes(args: argparse.Namespace) -> None:
         print(f"  {row['start']} → {row['end']}  {row['regime']}")
 
 
+def cmd_ui(args: argparse.Namespace) -> None:
+    from cs2trader.ui.server import serve
+
+    serve(args.port)
+
+
 def cmd_report(args: argparse.Namespace) -> None:
     from cs2trader.report import build_report
 
@@ -234,6 +240,10 @@ def main() -> None:
     rp.set_defaults(func=cmd_report)
 
     sub.add_parser("strategies").set_defaults(func=cmd_strategies)
+
+    ui = sub.add_parser("ui", help="local web UI on 127.0.0.1 (verdict, runs, market, collector, settings)")
+    ui.add_argument("--port", type=int, default=8765)
+    ui.set_defaults(func=cmd_ui)
 
     args = p.parse_args()
     try:

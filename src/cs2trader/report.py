@@ -1,10 +1,11 @@
 import hashlib
 import html
+import json
 import re
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -295,5 +296,9 @@ def build_report(store: Store, out_dir: Path, settings: Settings | None = None,
     out = Path(out_dir) / day.isoformat()
     out.mkdir(parents=True, exist_ok=True)
     ev.results.write_parquet(out / "results.parquet")
+    # The UI reads the verdicts from here; the HTML stays the human-readable copy.
+    (out / "verdicts.json").write_text(json.dumps({
+        "summary": summary, "results_hash": digest, "capitals": caps,
+        "verdicts": [asdict(v) for v in ev.verdicts]}, indent=2, sort_keys=True) + "\n")
     (out / "report.html").write_text(page)
     return out / "report.html"

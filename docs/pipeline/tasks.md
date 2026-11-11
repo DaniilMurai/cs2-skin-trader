@@ -426,7 +426,7 @@ request and never keeps the file open; anything that writes runs as a subprocess
       Executor: main loop
       Depends on: T-31
 
-- [ ] T-36 — UI server skeleton and safety rails (AC-18)
+- [x] T-36 — UI server skeleton and safety rails (AC-18) *(tests/test_ui.py security tests green 2026-11-11)*
       Files: src/cs2trader/ui/server.py, src/cs2trader/ui/security.py, src/cs2trader/cli.py,
              tests/test_ui_security.py
       Do: `cs2 ui [--port N]` binds 127.0.0.1; a start-up token required on every POST (sent in a
@@ -437,7 +437,7 @@ request and never keeps the file open; anything that writes runs as a subprocess
       Executor: main loop
       Depends on: T-31
 
-- [ ] T-37 — Read API: report, runs, market, collector (AC-15)
+- [x] T-37 — Read API: report, runs, market, collector (AC-15) *(read API tests green; real-data pages checked in the browser 2026-11-11)*
       Files: src/cs2trader/ui/api.py, tests/test_ui_api.py
       Do: JSON for the latest verdict table, one run's equity and trades, index + regimes + category
           indices + one item's bars, collector status (reuse `collect_status`); each carries
@@ -447,7 +447,7 @@ request and never keeps the file open; anything that writes runs as a subprocess
       Executor: subagent
       Depends on: T-36
 
-- [ ] T-38 — Verdict and Run pages (AC-15)
+- [x] T-38 — Verdict and Run pages (AC-15) *(Verdict and Run pages checked in the browser on the real data clone 2026-11-11)*
       Files: src/cs2trader/ui/static/*, tests/test_ui_pages.py
       Do: table with holds up / fails + first broken rule and benchmarks beside it; a run page with the
           equity curve in both units, drawdown shading and the trade table; inline-SVG chart helper
@@ -456,7 +456,7 @@ request and never keeps the file open; anything that writes runs as a subprocess
       Executor: subagent
       Depends on: T-37
 
-- [ ] T-39 — Market and Collector pages (AC-15)
+- [x] T-39 — Market and Collector pages (AC-15) *(Market and Collector pages checked in the browser on the real data clone 2026-11-11 (the index chart starts at 2018 by default: the 2013–2017 index is unreliable))*
       Files: src/cs2trader/ui/static/*
       Do: index level with regime bands and a category selector; one item's price chart with search;
           collector page with snapshots per hour, gaps, item share, source (gha/mac), freshness
@@ -464,7 +464,7 @@ request and never keeps the file open; anything that writes runs as a subprocess
       Executor: subagent
       Depends on: T-37
 
-- [ ] T-40 — Settings editor (AC-16)
+- [x] T-40 — Settings editor (AC-16) *(saved a setting through the page, invalid value rejected with the file unchanged, 2026-11-11)*
       Files: src/cs2trader/ui/settings_api.py, src/cs2trader/config.py, tests/test_ui_settings.py
       Do: read the editable groups from `Settings`, validate against the dataclass types and ranges,
           write `cs2.toml` atomically with a `.bak`, show verdict thresholds read-only, never touch
@@ -475,7 +475,7 @@ request and never keeps the file open; anything that writes runs as a subprocess
       Executor: main loop
       Depends on: T-36
 
-- [ ] T-41 — Job runner and the Run form (AC-17)
+- [x] T-41 — Job runner and the Run form (AC-17) *(started bh_universe $1,000 2025-01-01…09-30 from the form: run_id 4791e350a5aea310, identical to `cs2 backtest`, 2026-11-11)*
       Files: src/cs2trader/ui/jobs.py, src/cs2trader/ui/static/*, tests/test_ui_jobs.py
       Do: a single-slot queue that starts `cs2 backtest` as a subprocess, streams its progress, survives
           the browser closing; "busy" when the DuckDB file is locked or a job is running; the form
@@ -485,7 +485,7 @@ request and never keeps the file open; anything that writes runs as a subprocess
       Executor: main loop
       Depends on: T-40, T-38
 
-- [ ] T-42 — End-to-end check of the UI
+- [ ] T-42 — End-to-end check of the UI *(all pages and both forms ran live on a clone of the real data 2026-11-11; waits for the author to look, and for the stage-8 re-audit of `ui/`)*
       Files: docs/pipeline/brief.md (How to run)
       Do: start `cs2 ui` on the real data clone, open every page in the built-in browser, edit a setting,
           start a backtest, compare its numbers with the CLI; write the commands into "How to run"

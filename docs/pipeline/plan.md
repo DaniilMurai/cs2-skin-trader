@@ -151,7 +151,7 @@ AC-15: Given — a report and data exist.
 
 AC-16: Given — the Settings page.
        When — a value is edited and saved.
-       Then — the groups strategy parameters, costs and fills, regime and universe, and report
+       Then — the groups strategy parameters (saved as the defaults that pre-fill the Run form; the report keeps using each strategy's grid), costs and fills, regime and universe, and report
        windows (walk-forward windows, capitals, holdout start) can be changed; an invalid
        value is rejected with the reason and nothing is written; a valid one goes to `cs2.toml`
        (the old file kept as `cs2.toml.bak`) and the page says that results made under other
