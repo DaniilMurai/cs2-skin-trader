@@ -110,6 +110,12 @@ def test_property_no_negative_qty_or_overspend(registered):
         if res.trades.height:
             filled = res.trades.filter(pl.col("qty_filled") > 0)
             assert (filled["qty_filled"] <= filled["qty_requested"]).all()
+        # Cash conservation: the clamp at zero must not hide overspending.
+        cost = res.spec.costs[0]
+        flow = sum((-1 if f["side"] == "buy" else 1) * f["qty_filled"] * f["price"]
+                   * (1 + (cost.buyer_fee if f["side"] == "buy" else -cost.seller_fee))
+                   for f in res.trades.iter_rows(named=True))
+        assert res.equity["balance"][-1] == pytest.approx(res.spec.capital + flow, abs=1e-6)
 
 
 def test_reading_the_future_raises(monkeypatch):

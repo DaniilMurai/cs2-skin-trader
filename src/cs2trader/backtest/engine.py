@@ -74,6 +74,7 @@ def apply_fills(orders: Sequence[Order], bar: pl.DataFrame, book: Book,
     rows = {r["market_hash_name"]: r
             for r in bar.filter(pl.col("market_hash_name").is_in(wanted)).iter_rows(named=True)}
     out: list[Fill] = []
+    traded: dict[str, int] = {}   # units already filled today per item: the volume cap is per item and day
     for o in sorted(orders, key=lambda o: o.side != "sell"):
         if o.qty <= 0:
             raise InvariantViolation(f"order quantity must be positive: {o}")
@@ -81,7 +82,7 @@ def apply_fills(orders: Sequence[Order], bar: pl.DataFrame, book: Book,
         if r is None:
             out.append(Fill(t, o.market_hash_name, o.side, o.qty, 0, 0.0, 0.0, "no_data"))
             continue
-        cap = _cap(r["volume"], fills.participation_cap)
+        cap = max(_cap(r["volume"], fills.participation_cap) - traded.get(o.market_hash_name, 0), 0)
         sign = 1 if o.side == "buy" else -1
         price = r["price"] * _ratio(r, fills) * (1 + sign * fills.spread_penalty)
         if o.limit is not None and sign * (price - o.limit) > 0:
@@ -93,7 +94,9 @@ def apply_fills(orders: Sequence[Order], bar: pl.DataFrame, book: Book,
             qty = min(o.qty, cap, affordable)
             reason = "ok" if qty == o.qty else ("volume_cap" if qty == cap else "no_cash")
             if qty > 0:
-                # The affordability epsilon may overshoot by float dust; clamp it, not real debt.
+                if book.balance - qty * unit < -1e-6:
+                    raise InvariantViolation(f"overspend: balance {book.balance} < cost {qty * unit} for {o}")
+                # The affordability epsilon may overshoot by float dust; clamp only that.
                 book.balance = max(book.balance - qty * unit, 0.0)
                 book.lots.append(Lot(o.market_hash_name, qty, unit, t,
                                      t + timedelta(days=cost.lock_days)))
@@ -119,6 +122,7 @@ def apply_fills(orders: Sequence[Order], bar: pl.DataFrame, book: Book,
                     lot.qty -= take
                     left -= take
             book.lots = [l for l in book.lots if l.qty > 0]
+        traded[o.market_hash_name] = traded.get(o.market_hash_name, 0) + qty
         book.fees_paid += fee
         if book.balance < -1e-9 or any(l.qty < 0 for l in book.lots):
             raise InvariantViolation(f"balance {book.balance} after {o}")

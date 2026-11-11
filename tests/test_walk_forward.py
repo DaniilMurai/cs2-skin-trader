@@ -93,6 +93,24 @@ def test_tuning_never_reads_the_holdout(toy):
     assert full.n_variants == 3 * (len(folds(WF)) + 1)
 
 
+def test_tuning_ignores_poisoned_holdout_in_shared_market(toy):
+    # report.evaluate_all hands walk_forward a market that includes the holdout; its prices must not matter.
+    from cs2trader.backtest.engine import load_market
+    bars = synthetic_bars(7, 200)
+    poisoned = bars.with_columns(
+        pl.when(pl.col("t") >= WF.holdout_start).then(pl.col("price") * 1000).otherwise(pl.col("price"))
+        .alias("price"))
+    runs = []
+    for b in (bars, poisoned):
+        st = Store(b)
+        data = load_market(st, WF.start, WF.end, Settings())
+        runs.append(walk_forward(toy, 1000.0, st, WF, Settings(), data=data))
+    clean, dirty = runs
+    assert clean.chosen_params == dirty.chosen_params
+    assert [m for *_, m in clean.folds] == [m for *_, m in dirty.folds]
+    assert clean.test_returns == dirty.test_returns
+
+
 def test_variants_are_recorded(toy):
     store = Store(synthetic_bars(3, 200))
     res = walk_forward(toy, 100.0, store, WF, Settings())

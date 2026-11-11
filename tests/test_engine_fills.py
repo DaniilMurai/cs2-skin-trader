@@ -95,6 +95,14 @@ def test_ac8_volume_cap_and_spread():
     assert close(s.fee, 2 * 38.8 * 0.05)
 
 
+def test_volume_cap_is_per_item_and_day_across_orders():
+    fills = FillModel(participation_cap=0.20, spread_penalty=0.0)
+    book = Book(10_000.0)
+    fs = apply_fills([Order(ITEM, "buy", 2)] * 3, bar(D0, volume=10), book, COST, fills)
+    assert [f.qty_filled for f in fs] == [2, 0, 0]
+    assert sum(l.qty for l in book.lots) == 2
+
+
 def test_cap_is_not_lost_to_float_error():
     book = Book(1e6)
     [f] = apply_fills([Order(ITEM, "buy", 100)], bar(D0, price=1.0, volume=100),
