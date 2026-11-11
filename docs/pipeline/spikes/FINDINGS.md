@@ -255,3 +255,11 @@ sticker capsule / souvenir dates and the pre-2023 case drop-pool history do not 
 - Use the Wikipedia API (1 fetch, cached) and the Steam news API (keyless; 3 requests for the full history) in a one-off build script; if Liquipedia
   is used, via the MediaWiki API only, UA with contact, gzip, ≤1 req/2 s (`parse` ≤1/30 s), attribution in the report. Attribute Wikipedia (CC BY-SA).
 - Open point: the ConteX text should be treated as a manual reference to re-verify against Steam posts/prices; do not redistribute it.
+
+## S-10 — Cloudflare Worker as the hourly collector (interim, 2026-11-11)
+**Script:** `spikes/10-cloudflare-collector/` (`worker.js`, `wrangler.toml`, README with the steps)
+**Answer so far:** partly. Q1 yes; Q2–Q4 still open.
+**Facts:**
+- Q1 (not blocked): the first manual `/run` at 2026-11-11 16:22:38 UTC returned HTTP 200 for both feeds: asks 2,517,973 bytes in 75 ms, bids 2,389,270 bytes in 70 ms, stored uncompressed in R2 (`COMPRESS = "0"`).
+- Storage if raw: ~4.9 MB per run, ~117 MB/day, ~3.5 GB/month, so R2's free 10 GB lasts under 3 months; gzip (~275 KB per feed measured in S-06) is needed for a year-round collector (~13 MB/day, ~4.7 GB/year).
+- Open: cron punctuality and skipped runs (read `/status` after 24–48 h), CPU time per run on the free plan (dashboard, with and without `COMPRESS = "1"`).
