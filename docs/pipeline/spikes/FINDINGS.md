@@ -265,3 +265,15 @@ sticker capsule / souvenir dates and the pre-2023 case drop-pool history do not 
 - Open: cron punctuality and skipped runs (read `/status` after 24–48 h), CPU time per run on the free plan (dashboard, with and without `COMPRESS = "1"`).
 - Q3 (CPU, measured 2026-11-11 with `wrangler tail`, `/run` invocations of one run = both feeds): uncompressed 7, 7, 9, 11, 12, 13 ms (wall 1.1–1.2 s, once 7.9 s); with `COMPRESS = "1"` 77, 78, 117, 117, 184 ms (stored 291 KB asks + 275 KB bids). Cloudflare's documented limit (developers.cloudflare.com/workers/platform/limits, read 2026-11-11): Free 10 ms CPU per invocation for HTTP and Cron Triggers, 50 subrequests; Paid 30 s CPU for cron intervals under an hour, 15 min for hourly, 10,000 subrequests, cron wall-clock 15 min. All 11 test invocations finished `ok` even above 10 ms, so the account may not be on Free or the limit is not enforced as documented; not verified which.
 - Consequence: gzip inside the Worker needs the paid plan (about $5/month). Raw storage sits at the edge of the free limit (7–13 ms), so it is risky; if raw is kept, the Mac should import each file and delete it from R2 so the bucket does not fill (117 MB/day raw).
+
+## S-11 — market.csgo vs Steam: is there a cross-platform edge? (2026-11-11, preliminary)
+- Data: only 3 days (45 hourly snapshots, 2026-11-09…11) of market.csgo asks/bids, so this is a snapshot of
+  the gap, not a backtest. Script: `spikes/11-cross-platform/edge.py`.
+- Gap: market.csgo lowest ask is a median 0.78 of the Steam price (IQR 0.73–0.84, 189 items); best bid 0.70.
+- Direction that pays: buy on market.csgo with cash, sell on Steam. A Steam seller keeps price/1.15, so the
+  edge in **Steam-wallet units** is (Steam/1.15)/ask − 1: median +18% (5th pct +1.7%, 95th +26%, 108
+  item-days, 36 items with Steam volume ≥ 10/day), above +10% in 72% of them. Top items are old cases.
+- The reverse (buy on Steam with wallet, sell on market.csgo: ×0.95 seller fee, ×0.98 to wallet) loses about 27%.
+- Not known / not counted: Steam sells at the lowest listing, not the median we use; Steam volume (~80/day for
+  a $3 case) caps the size; market.csgo withdrawal to Steam and any Steam trade hold on arrival; the result is
+  wallet money, not cash. Treat +18% as an upper bound until a forward paper test measures it.
