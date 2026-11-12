@@ -12,6 +12,7 @@ from cs2trader.errors import ConfigError, Cs2Error
 from cs2trader.models import Sale
 from cs2trader.sources.marketcsgo import MarketCsgoKeyed, MarketCsgoPublic
 from cs2trader.sources.skinport import SkinportPublic
+from cs2trader.sources.waxpeer import WaxpeerPublic
 from cs2trader.store import Store
 
 # The keyed endpoint returns the last 100 sales per item; an item is re-polled once
@@ -76,13 +77,14 @@ def worst_error(errors: Sequence[Cs2Error]) -> Cs2Error | None:
 
 def run_collect(
     store: Store,
-    kinds: Sequence[Literal["asks", "bids", "sales", "skinport"]],
+    kinds: Sequence[Literal["asks", "bids", "sales", "skinport", "waxpeer"]],
     host: Literal["gha", "mac"],
     now: datetime,
     settings: Settings | None = None,
     public: MarketCsgoPublic | None = None,
     keyed: MarketCsgoKeyed | None = None,
     skinport: SkinportPublic | None = None,
+    waxpeer: WaxpeerPublic | None = None,
 ) -> tuple[CollectReport, dict[str, Cs2Error], dict[str, int]]:
     """Returns the report, the error per failed kind and rows written per ok kind (a failed
     sales kind may still have saved the batches fetched before the error)."""
@@ -102,6 +104,10 @@ def run_collect(
             elif kind == "skinport":
                 src = skinport or SkinportPublic(quarantine / "skinport")
                 rows[kind] = _collect_skinport(store, src, host, files)
+            elif kind == "waxpeer":
+                at, part = (waxpeer or WaxpeerPublic(quarantine / "waxpeer")).prices()
+                files.append(store.write_waxpeer(at, host, part))
+                rows[kind] = len(part)
             else:
                 rows[kind] = _collect_sales(store, kinds_host=host, now=now, settings=settings,
                                             keyed=keyed, files=files, quarantine=quarantine / "mc_keyed")

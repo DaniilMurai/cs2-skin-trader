@@ -178,9 +178,9 @@ def cmd_collect_pull(args: argparse.Namespace) -> None:
 
 def cmd_collect_run(args: argparse.Namespace) -> None:
     kinds = [k.strip() for k in args.kinds.split(",") if k.strip()]
-    bad = sorted(set(kinds) - {"asks", "bids", "sales", "skinport"})
+    bad = sorted(set(kinds) - {"asks", "bids", "sales", "skinport", "waxpeer"})
     if bad or not kinds:
-        raise ConfigError(f"--kinds: unknown {bad or 'empty list'}; use asks,bids,sales,skinport")
+        raise ConfigError(f"--kinds: unknown {bad or 'empty list'}; use asks,bids,sales,skinport,waxpeer")
     overrides = {"mc.sales_max_names_per_run": args.sales_max} if args.sales_max is not None else {}
     settings = load_settings(**overrides)
     _report, failed, rows = run_collect(Store(settings.data_dir, in_memory=True), kinds, args.host, datetime.now(UTC), settings)

@@ -519,3 +519,4 @@ request and never keeps the file open; anything that writes runs as a subprocess
       Executor: subagent
 - [x] T-50 — Re-run the full report with the median benchmark (`bh_median`) and compare with the T-35 verdict *(done 2026-11-12: 80 min, hash fe95acd963df7a5f, "No strategy holds up at $100 / $1,000"; all 18 strategy/capital rows fail beats_cash; second run for hash identity not done)*
       Executor: main loop
+- [x] T-53 — Collect Waxpeer prices hourly (keyless `/v1/prices`, `min` in thousandths of a dollar, parquet in `data/collector/waxpeer/`, ~0.36 MB/hour) *(done 2026-11-12: 272 tests pass, launchd job runs `--kinds asks,bids,skinport,waxpeer`, first file landed; Mac only; Waxpeer's terms on automation not confirmed)*

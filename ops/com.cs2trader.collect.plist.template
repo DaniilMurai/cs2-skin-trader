@@ -8,7 +8,7 @@
     <array>
         <string>/bin/sh</string>
         <string>-c</string>
-        <string>@UV@ run cs2 collect run --kinds asks,bids,skinport --host mac; @UV@ run cs2 collect pull --cf-only</string>
+        <string>@UV@ run cs2 collect run --kinds asks,bids,skinport,waxpeer --host mac; @UV@ run cs2 collect pull --cf-only</string>
     </array>
     <key>WorkingDirectory</key>
     <string>@REPO@</string>

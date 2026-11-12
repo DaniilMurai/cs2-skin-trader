@@ -138,3 +138,27 @@ def test_skinport_unavailable_is_reported_not_raised(tmp_path):
     settings, store = setup(tmp_path)
     _, failed, _ = run_collect(store, ["skinport"], "mac", NOW, settings, skinport=skinport(tmp_path, 503))
     assert isinstance(failed["skinport"], SourceUnavailable)
+
+
+def waxpeer(tmp_path, status=200):
+    from cs2trader.sources.waxpeer import WaxpeerPublic
+    body = {"success": True, "items": [{"name": "Chroma 2 Case", "count": 50, "min": 812},
+                                        {"name": "Odd Item", "count": 0, "min": None}]}
+    return WaxpeerPublic(tmp_path / "q", max_retries=0, backoff_s=0,
+                         client=httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(status, json=body))))
+
+
+def test_waxpeer_converts_thousandths_and_skips_missing_price(tmp_path):
+    import polars as pl
+
+    settings, store = setup(tmp_path)
+    report, failed, rows = run_collect(store, ["waxpeer"], "mac", NOW, settings, waxpeer=waxpeer(tmp_path))
+    assert not failed and rows["waxpeer"] == 1
+    df = pl.read_parquet(report.files[0])
+    assert df["min_price"].to_list() == [0.812] and df["quantity"].to_list() == [50]
+
+
+def test_waxpeer_unavailable_is_reported_not_raised(tmp_path):
+    settings, store = setup(tmp_path)
+    _, failed, _ = run_collect(store, ["waxpeer"], "mac", NOW, settings, waxpeer=waxpeer(tmp_path, 503))
+    assert isinstance(failed["waxpeer"], SourceUnavailable)
