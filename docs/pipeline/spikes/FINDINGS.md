@@ -277,3 +277,26 @@ sticker capsule / souvenir dates and the pre-2023 case drop-pool history do not 
 - Not known / not counted: Steam sells at the lowest listing, not the median we use; Steam volume (~80/day for
   a $3 case) caps the size; market.csgo withdrawal to Steam and any Steam trade hold on arrival; the result is
   wallet money, not cash. Treat +18% as an upper bound until a forward paper test measures it.
+
+## S-12 — Other platforms for cash-to-cash arbitrage (2026-11-12, preliminary)
+**Question:** is there a platform besides Steam whose prices differ enough from market.csgo to pay after fees, and can we read it?
+**Script:** `spikes/12-platforms/gap.py` (one Skinport snapshot vs the market.csgo asks of 2026-11-12).
+**Facts (verified):**
+- Skinport (official docs, docs.skinport.com/items, read 2026-11-12): `GET /v1/items`, no auth, USD supported,
+  `tradable=true|false`, fields min/max/mean/median price + quantity, 8 requests per 5 min shared with sales
+  history, responses cached 5 min, header `Accept-Encoding: br` required (else 406). Hourly polling is far inside the limit.
+- Skinport seller fee (official blog, 2025-07-18): 8% standard, 6% above €1,000, 2% private sales. Buyer fee and payout fee not stated there.
+**Facts (only from third-party review sites, they disagree; verify on the platform before relying on them):**
+- DMarket: seller fee 2-10% by item value/tier; proceeds held 7 days since Sep 2025. CSFloat: 2% seller fee, 0.5-2.8% on deposits/withdrawals.
+  Waxpeer: 5-6% seller fee, crypto/PayPal/Steam-balance payout, reliability concerns. Buff163: needs a Chinese account, CNY, ~2.5% fee unverified.
+  None of these four was checked for API access or terms of service on automation.
+**Measured gap (one snapshot, items with ask ≥ $2, ≥ 3 listings on both sides, 8,000 items; fees: market.csgo 5%, Skinport 8%):**
+| Direction | Skinport listings | Median net edge | Share of items > 0 | Share > +5% |
+|---|---|---|---|---|
+| buy market.csgo, sell Skinport | tradable only | −14% | 20% | 15% |
+| buy Skinport, sell market.csgo | tradable only | +1.8% | 54% | 42% |
+| buy Skinport, sell market.csgo | incl. trade-locked | +6.9% | 69% | 55% |
+- Reading: Skinport's lowest price is usually a bit below market.csgo's lowest ask, so the pay direction is buy on Skinport, sell on market.csgo, but the median edge on tradable items is only about +2% before the Skinport withdrawal/payment costs, the trade lock and price drift. The tails (+90% and beyond) are mostly name matches that are not the same item (float, stickers, souvenir variants) and are not an edge.
+- The edge is in cash on both sides (no wallet-money problem), which is the point of this route.
+**Answer:** Q1 (is it readable): yes for Skinport. Q2 (does it pay): not shown. One snapshot, edge ≈ +2% median on tradable items, before costs we have not measured (how a purchase on Skinport gets cash, any deposit fee, the 7-day trade hold on arrival at market.csgo, and selling below the ask).
+**Next:** collect Skinport `min_price` hourly beside market.csgo (task T-51), then paper-test with the same lock and volume rules (T-47 extended); check CSFloat/DMarket APIs and terms next if Skinport shows a stable gap.

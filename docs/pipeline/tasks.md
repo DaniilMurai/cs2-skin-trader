@@ -510,6 +510,7 @@ request and never keeps the file open; anything that writes runs as a subprocess
       Executor: author (secrets), main loop (check)
 
 - [ ] T-47 — Wallet arbitrage paper test: from the hourly snapshots, log every hour the (Steam/1.15)/ask edge per item with the Steam volume cap, and report the realistic daily profit on $100 and $1,000 in wallet units *(needs ≥ 14 days of snapshots, ~2026-11-24)*
+- [ ] T-51 — Add Skinport `min_price`/`quantity` to the hourly collector (public `/v1/items`, USD, `tradable=true`, `Accept-Encoding: br`, 1 request per run) and store it next to market.csgo; DoD: 24 hourly snapshots in a day, join to asks by name *(S-12; extends T-47 to a cash-to-cash direction)*
       Executor: main loop
 - [x] T-48 — New low-turnover strategies, backtested on the walk-forward first, holdout once: (a) quality basket of items with the longest price history and rising volume, rebalanced quarterly; (b) buy cases when the index is `falling`, hold; (c) cheap-item mean reversion with a minimum 15% expected move *(2026-11-11: quality_basket, case_dip, cheap_reversion built, 268 tests; all three fail beats_cash on the holdout at $100 and $1,000)*
       Executor: main loop
