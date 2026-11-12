@@ -109,3 +109,12 @@ their losses are price falls of the items they hold, not trading costs; cheap_re
 bad entries. Design note: the first quality_basket re-picked 7-10 of 10 items per quarter and paid 46% of capital
 in fees on 2023-24; a keep-while-in-top-2n rule (also stated in its spec) cut that to 6%. That change was made
 looking at 2023-24 data, not the holdout. Not a full report: the T-50 run will include these strategies.
+
+### 2026-11-12 — T-50: full report with the median benchmark
+
+Run 80 min, results hash fe95acd963df7a5f (T-35 was d3ea18d4859fd53e; the hash differs because three strategies and
+the bh_median rows were added). Verdict unchanged: "No strategy holds up at $100 / $1,000". All 9 strategies fail
+at both capitals on the first rule, beats_cash. Holdout net return (cash-out) at $100 / $1,000: event -47% / -21%,
+trend_ma -30% / -30%, cheap_reversion -33% / -19%, quality_basket -55% / -54%, case_dip -64% / -59%,
+v1_dip_knives -65% / -87%, mean_reversion -86% / -59%, v2_category_momentum -90% / -77%, xs_momentum -96% / -100%.
+Cash is -5% (withdraw fee). Hash identity across two runs was not re-checked.

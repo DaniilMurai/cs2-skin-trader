@@ -515,5 +515,5 @@ request and never keeps the file open; anything that writes runs as a subprocess
       Executor: main loop
 - [x] T-49 — Check the bh_universe +60% (other hash seeds, only items alive at the start) before any strategy is compared with it *(2026-11-11: 30 seeds, median 0% at $1,000 and +3.4% at $100; the +60% was luck)*
       Executor: subagent
-- [ ] T-50 — Re-run the full report with the median benchmark (`bh_median`) and compare with the T-35 verdict *(code and 265 tests done 2026-11-11; the 71-min run is not started)*
+- [x] T-50 — Re-run the full report with the median benchmark (`bh_median`) and compare with the T-35 verdict *(done 2026-11-12: 80 min, hash fe95acd963df7a5f, "No strategy holds up at $100 / $1,000"; all 18 strategy/capital rows fail beats_cash; second run for hash identity not done)*
       Executor: main loop
