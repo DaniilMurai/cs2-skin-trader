@@ -511,7 +511,7 @@ request and never keeps the file open; anything that writes runs as a subprocess
 
 - [ ] T-47 — Wallet arbitrage paper test: from the hourly snapshots, log every hour the (Steam/1.15)/ask edge per item with the Steam volume cap, and report the realistic daily profit on $100 and $1,000 in wallet units *(needs ≥ 14 days of snapshots, ~2026-11-24)*
 - [x] T-51 — Add Skinport `min_price`/`quantity` to the hourly collector (public `/v1/items`, USD, `tradable=true`, `Accept-Encoding: br`, 1 request per run) and store it next to market.csgo; DoD: 24 hourly snapshots in a day, join to asks by name *(S-12; extends T-47 to a cash-to-cash direction)* *(code and tests done 2026-11-12, live run ok; launchd job switched to `--kinds asks,bids,skinport` and merged to main 2026-11-12; first hourly file landed; Mac only, the Cloudflare Worker still fetches market.csgo only)*
-- [ ] T-52 — Decide whether to buy one month of aggregator history (CSPriceAPI, from $50/month) to backtest market.csgo vs Skinport/Buff163/SkinBaron over 1+ year; first check on a few items that its prices match our own snapshots *(needs the user's go and payment; S-12 addendum)*
+- [x] T-52 — ~~Buy aggregator history~~ *(dropped 2026-11-12: the project spends no money, free data only)*
       Executor: main loop
 - [x] T-48 — New low-turnover strategies, backtested on the walk-forward first, holdout once: (a) quality basket of items with the longest price history and rising volume, rebalanced quarterly; (b) buy cases when the index is `falling`, hold; (c) cheap-item mean reversion with a minimum 15% expected move *(2026-11-11: quality_basket, case_dip, cheap_reversion built, 268 tests; all three fail beats_cash on the holdout at $100 and $1,000)*
       Executor: main loop

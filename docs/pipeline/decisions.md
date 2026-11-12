@@ -132,3 +132,9 @@ Re-ran xs_momentum with default params on the holdout ($100, 905 filled trades, 
   The verdict does not use this Sharpe for "beats cash", and the deflated Sharpe is negative, so no verdict changes.
 - No engine change needed. A price/volume floor for xs_momentum would be a new strategy variant (tuned only on
   2023-24 data, not the holdout); not built.
+
+### 2026-11-12 — Free data only
+Decision (user): the project spends no money. Paid history (CSPriceAPI, from $50/month) is out; T-52 is dropped.
+Past data for cross-platform tests comes only from free sources: our own hourly snapshots, Skinport's free
+public endpoints, and free tiers of third parties if their terms allow it. Alternative rejected: one paid month
+of aggregator history for a 1-year two-sided backtest. Consequence: the arbitrage verdict waits for our own data (T-47).
