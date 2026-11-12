@@ -307,3 +307,18 @@ sticker capsule / souvenir dates and the pre-2023 case drop-pool history do not 
 **Third-party aggregator, from its own pages (vendor claims, unverified):** CSPriceAPI covers 15 markets (Market.CSGO, Skinport, CSFloat, DMarket, Waxpeer, SkinBaron, ShadowPay, LIS-SKINS, BUFF163, C5Game, YouPin898, EcoSteam, CS.MONEY, White.market, Steam). It claims 1+ year of daily history for 12 of them (all except CS.MONEY, White.market, Steam), hourly points for about 100 days, live prices every ~5 min. History needs a paid plan ("from $50/month"; its coverage page says Enterprise, so the price is unclear); its free test key has no history. Licence/redistribution terms not read. SteamWebAPI also lists multi-market daily history, depth and price unknown.
 **Consequence:** a real two-sided past test (market.csgo vs Skinport, plus Buff163/SkinBaron) is possible only by buying aggregator history; nothing free gives it. Whether its "price" is the lowest ask like our collector's is unverified, so a one-month subscription should first be tested on a few items against our own 2026-11-09+ snapshots.
 **Status of collection (T-51):** done in code (`cs2 collect run --kinds asks,bids,skinport`, parquet in `data/collector/skinport/`, tradable and full views, ~0.5 MB/hour, live run 50,324 rows). Not running hourly yet: the launchd job on the Mac still uses the old kinds.
+
+### S-12 addendum 2 — which other platforms have a free API (probed live 2026-11-12, one GET each)
+| Platform | Free read without a key? | Evidence |
+|---|---|---|
+| Skinport | Yes | `/v1/items`, 200, 50k items (T-51 collects it) |
+| Waxpeer | Yes | `GET https://api.waxpeer.com/v1/prices?game=csgo&minified=1`: 200, 2 MB, 27,035 items as `{name, count, min}`; `min` is in thousandths of a dollar (matches market.csgo asks after /1000). Docs (docs.waxpeer.com) show the call with no key; rate limit not stated; its terms-of-use page could not be fetched, so automation rules are unconfirmed. |
+| DMarket | No | old `/exchange/v1/market/items` returns 410 "retired"; new `/marketplace-api/v2/offers` returns 401 |
+| CSFloat | No | listings search returns 403 "You need to be logged in" (a free key may exist; not tried, needs an account) |
+| BitSkins | Not found | `/market/insell/730` returns an empty list; v2 docs at bitskins.com/docs/api/v2 not read; key likely needed |
+| SkinBaron, White.market, CS.MONEY, Gamerpay, Buff163 | Nothing found | no official free endpoint found; aggregators cover them only on paid plans (out of scope) |
+**Waxpeer vs market.csgo (one snapshot, 10,734 items with ask ≥ $2 and ≥ 3 listings on both; fees: market.csgo 5%, Waxpeer 5-6%):**
+- Buy on Waxpeer, sell on market.csgo: median net +0.6%, IQR −3.4% to +5.7%, 27.5% of items above +5%; the +49% 95th percentile is mostly mismatched items.
+- Buy on market.csgo, sell on Waxpeer: median −10%, only 7% of items above 0.
+- Waxpeer's lowest price is about 6% below market.csgo's lowest ask (median ratio 0.94), but the two fees eat it. Not an edge on its own; the gap is smaller than Skinport's.
+**Consequence:** the free, keyless, hourly-collectable set is market.csgo, Skinport and Waxpeer. The other platforms need an account/key or are paid-only. Whether Waxpeer allows automated polling is unconfirmed (terms page unreachable).
