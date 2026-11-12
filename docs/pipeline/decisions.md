@@ -118,3 +118,17 @@ at both capitals on the first rule, beats_cash. Holdout net return (cash-out) at
 trend_ma -30% / -30%, cheap_reversion -33% / -19%, quality_basket -55% / -54%, case_dip -64% / -59%,
 v1_dip_knives -65% / -87%, mean_reversion -86% / -59%, v2_category_momentum -90% / -77%, xs_momentum -96% / -100%.
 Cash is -5% (withdraw fee). Hash identity across two runs was not re-checked.
+
+### 2026-11-12 — xs_momentum diagnosis: not an engine bug, the strategy buys penny items
+
+Re-ran xs_momentum with default params on the holdout ($100, 905 filled trades, 476 buys). Findings:
+- Median buy price is $0.059, 75% of buys are under $0.17; the most-bought items are $0.02-0.30 Souvenir and
+  Well-Worn skins and cheap stickers. Ranking by raw lookback return has no price or volume floor, so the top-k
+  is always items whose last price jumped on a single thin trade (one item's buy prices span 0.018 to 0.22).
+- The strategy buys at close x (1 + 3% spread), fills on the next bar after the spike has reverted, and pays a 5%
+  seller fee on exit. Equity went 95 -> 0.35 over the holdout; this is a steady bleed, not one crash.
+- The +3.1 Sharpe next to -96% return is volatility drag, not a metric bug: `_sharpe` (evaluate.py) uses the
+  arithmetic mean of daily returns, and an equity that shrinks to under $1 has huge swings in both directions.
+  The verdict does not use this Sharpe for "beats cash", and the deflated Sharpe is negative, so no verdict changes.
+- No engine change needed. A price/volume floor for xs_momentum would be a new strategy variant (tuned only on
+  2023-24 data, not the holdout); not built.
