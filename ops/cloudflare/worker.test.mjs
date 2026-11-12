@@ -98,3 +98,9 @@ test("the quota check leaves room for the files a run may add", withFetch(200, 1
   assert.match(e.stopped, /quota/);
   assert.equal(e.results.length, 0);
 }));
+
+test("/run?feeds= runs only the named feeds", withFetch(200, 1000, async () => {
+  const env = { BUCKET: new FakeBucket(), TRIGGER_TOKEN: "secret" };
+  const r = await handle(req("/run?feeds=waxpeer,nonsense", { method: "POST" }), env);
+  assert.deepEqual((await r.json()).results.map((x) => x.kind), ["waxpeer"]);
+}));

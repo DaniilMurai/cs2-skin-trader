@@ -106,7 +106,11 @@ export async function handle(request, env) {
     await env.BUCKET.delete(keys);
     return json({ deleted: keys.length });
   }
-  if (url.pathname === "/run" && request.method === "POST") return json(await collect(env, Date.now()));
+  if (url.pathname === "/run" && request.method === "POST") {
+    // ?feeds=skinport runs just that group, one invocation, like its cron would.
+    const asked = (url.searchParams.get("feeds") || "").split(",").filter((k) => k in FEEDS);
+    return json(await collect(env, Date.now(), new Date(), asked.length ? asked : Object.keys(FEEDS)));
+  }
   return new Response("not found", { status: 404 });
 }
 
