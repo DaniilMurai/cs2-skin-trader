@@ -103,3 +103,38 @@ def test_cli_exit_code_and_output(tmp_path, monkeypatch, capsys):
     out = capsys.readouterr().out
     assert exc.value.code == 4
     assert "asks: ok," in out and "bids: failed" in out
+
+
+SKINPORT = [
+    {"market_hash_name": "Chroma 2 Case", "version": None, "currency": "USD", "min_price": 0.8,
+     "median_price": 0.9, "quantity": 120},
+    {"market_hash_name": "Out Of Stock Knife", "version": None, "currency": "USD", "min_price": None,
+     "median_price": None, "quantity": 0},
+]
+
+
+def skinport(tmp_path, status=200):
+    from cs2trader.sources.skinport import SkinportPublic
+
+    def h(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(status, json=SKINPORT)
+    return SkinportPublic(tmp_path / "q", max_retries=0, backoff_s=0,
+                          client=httpx.Client(transport=httpx.MockTransport(h)))
+
+
+def test_skinport_writes_both_views_and_skips_out_of_stock(tmp_path):
+    import polars as pl
+
+    settings, store = setup(tmp_path)
+    report, failed, rows = run_collect(store, ["skinport"], "mac", NOW, settings, skinport=skinport(tmp_path))
+    assert not failed and rows["skinport"] == 2
+    df = pl.read_parquet(report.files[0])
+    assert sorted(df["tradable"].to_list()) == [False, True]
+    assert set(df["market_hash_name"]) == {"Chroma 2 Case"}
+    assert df["min_price"].to_list() == [0.8, 0.8]
+
+
+def test_skinport_unavailable_is_reported_not_raised(tmp_path):
+    settings, store = setup(tmp_path)
+    _, failed, _ = run_collect(store, ["skinport"], "mac", NOW, settings, skinport=skinport(tmp_path, 503))
+    assert isinstance(failed["skinport"], SourceUnavailable)

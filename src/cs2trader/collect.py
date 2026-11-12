@@ -11,6 +11,7 @@ from cs2trader.config import McSettings, Settings, load_settings, require_secret
 from cs2trader.errors import ConfigError, Cs2Error
 from cs2trader.models import Sale
 from cs2trader.sources.marketcsgo import MarketCsgoKeyed, MarketCsgoPublic
+from cs2trader.sources.skinport import SkinportPublic
 from cs2trader.store import Store
 
 # The keyed endpoint returns the last 100 sales per item; an item is re-polled once
@@ -75,12 +76,13 @@ def worst_error(errors: Sequence[Cs2Error]) -> Cs2Error | None:
 
 def run_collect(
     store: Store,
-    kinds: Sequence[Literal["asks", "bids", "sales"]],
+    kinds: Sequence[Literal["asks", "bids", "sales", "skinport"]],
     host: Literal["gha", "mac"],
     now: datetime,
     settings: Settings | None = None,
     public: MarketCsgoPublic | None = None,
     keyed: MarketCsgoKeyed | None = None,
+    skinport: SkinportPublic | None = None,
 ) -> tuple[CollectReport, dict[str, Cs2Error], dict[str, int]]:
     """Returns the report, the error per failed kind and rows written per ok kind (a failed
     sales kind may still have saved the batches fetched before the error)."""
@@ -97,6 +99,9 @@ def run_collect(
                 snap = src.asks() if kind == "asks" else src.bids()
                 files.append(store.write_snapshot(snap))
                 rows[kind] = len(snap.rows)
+            elif kind == "skinport":
+                src = skinport or SkinportPublic(quarantine / "skinport")
+                rows[kind] = _collect_skinport(store, src, host, files)
             else:
                 rows[kind] = _collect_sales(store, kinds_host=host, now=now, settings=settings,
                                             keyed=keyed, files=files, quarantine=quarantine / "mc_keyed")
@@ -105,6 +110,19 @@ def run_collect(
             failed[kind] = e
     report = CollectReport(tuple(ok), tuple(failed), tuple(files))
     return report, failed, rows
+
+
+def _collect_skinport(store: Store, src: SkinportPublic, host: str, files: list[Path]) -> int:
+    # Both views in one snapshot: tradable-only is what can be bought and resold now, the full list
+    # includes trade-locked listings that sell cheaper (S-12).
+    rows: list[dict] = []
+    fetched_at = None
+    for tradable in (True, False):
+        at, part = src.items(tradable)
+        fetched_at = fetched_at or at
+        rows += part
+    files.append(store.write_skinport(fetched_at, host, rows))
+    return len(rows)
 
 
 def _collect_sales(store: Store, kinds_host: Literal["gha", "mac"], now: datetime, settings: Settings,

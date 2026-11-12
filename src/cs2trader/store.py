@@ -161,6 +161,24 @@ class Store:
         self._create_view(snap.kind)
         return path
 
+    def write_skinport(self, fetched_at: datetime, host: str, rows: Sequence[Mapping[str, object]]) -> Path:
+        path = (self.data_dir / "collector" / "skinport" / f"day={fetched_at:%Y-%m-%d}"
+                / f"{fetched_at:%Y%m%dT%H%M%SZ}-{host}.parquet")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        n = len(rows)
+        df = pl.DataFrame({
+            "fetched_at": [fetched_at.astimezone(UTC)] * n,
+            "host": [host] * n,
+            **{k: [r[k] for r in rows] for k in ("market_hash_name", "version", "tradable", "min_price",
+                                                  "median_price", "quantity")},
+        }, schema_overrides={"fetched_at": pl.Datetime("us", "UTC"), "host": pl.String, "version": pl.String,
+                             "tradable": pl.Boolean, "min_price": pl.Float64, "median_price": pl.Float64,
+                             "quantity": pl.Int64})
+        tmp = path.with_suffix(".tmp")
+        df.write_parquet(tmp, compression="zstd")
+        tmp.replace(path)
+        return path
+
     def write_sales(self, sales: Mapping[str, Sequence[Sale]], host: str) -> Path:
         fetched_at = datetime.now(UTC)
         rows = [s for group in sales.values() for s in group]
