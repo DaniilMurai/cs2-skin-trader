@@ -21,23 +21,23 @@ const withFetch = (status, size, fn) => async () => {
   try { await fn(); } finally { globalThis.fetch = real; }
 };
 
-test("a run stores both feeds and a log entry", withFetch(200, 1000, async () => {
+test("a run stores every feed and a log entry", withFetch(200, 1000, async () => {
   const env = { BUCKET: new FakeBucket() };
   const e = await collect(env, Date.now());
-  assert.equal(e.results.length, 2);
-  assert.equal([...env.BUCKET.m.keys()].filter((k) => k.startsWith("raw/")).length, 2);
+  assert.equal(e.results.length, 4);
+  assert.equal([...env.BUCKET.m.keys()].filter((k) => k.startsWith("raw/")).length, 4);
   assert.equal([...env.BUCKET.m.keys()].filter((k) => k.startsWith("log/")).length, 1);
 }));
 
 test("stops adding files at the quota and says so", withFetch(200, 1000, async () => {
-  const env = { BUCKET: new FakeBucket(), MAX_BYTES: "2500" };
+  const env = { BUCKET: new FakeBucket(), MAX_BYTES: "6500" };
   await collect(env, Date.now(), new Date("2026-01-01T00:07:00Z"));
   const second = await collect(env, Date.now(), new Date("2026-01-01T01:07:00Z"));
-  assert.equal(second.results.length, 2);          // 2000 < 2500: still room
+  assert.equal(second.results.length, 4);          // 4000 < 6500: still room
   const third = await collect(env, Date.now(), new Date("2026-01-01T02:07:00Z"));
   assert.match(third.stopped, /quota/);
   assert.equal(third.results.length, 0);
-  assert.equal(await usageBytes(env.BUCKET), 4000);
+  assert.equal(await usageBytes(env.BUCKET), 8000);
 }));
 
 test("usage counts every page of the listing", async () => {
@@ -50,7 +50,7 @@ test("a non-200 feed is logged, not stored as data", withFetch(503, 10, async ()
   const env = { BUCKET: new FakeBucket() };
   await collect(env, Date.now());
   assert.equal([...env.BUCKET.m.keys()].filter((k) => k.startsWith("raw/")).length, 0);
-  assert.equal([...env.BUCKET.m.keys()].filter((k) => k.startsWith("errors/")).length, 2);
+  assert.equal([...env.BUCKET.m.keys()].filter((k) => k.startsWith("errors/")).length, 4);
 }));
 
 const req = (path, init = {}, token = "secret") =>

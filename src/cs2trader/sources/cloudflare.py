@@ -12,9 +12,11 @@ import httpx
 from cs2trader.errors import SchemaError, SourceUnavailable
 from cs2trader.models import Snapshot
 from cs2trader.sources.marketcsgo import parse_feed
+from cs2trader.sources.skinport import parse_items
+from cs2trader.sources.waxpeer import parse_prices
 from cs2trader.store import Store
 
-KEY = re.compile(r"^raw/(asks|bids)/day=\d{4}-\d{2}-\d{2}/(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z)\.json$")
+KEY = re.compile(r"^raw/(asks|bids|waxpeer|skinport)/day=\d{4}-\d{2}-\d{2}/(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z)\.json$")
 DELETE_BATCH = 50
 
 
@@ -75,14 +77,20 @@ def import_raw(store: Store, buf: CfBuffer, quarantine: Path) -> ImportReport:
         kind, stamp = m.group(1), m.group(2)
         raw = buf.get(key)
         try:
-            feed_time, rows = parse_feed(kind, json.loads(raw))
+            body = json.loads(raw)
+            if kind in ("asks", "bids"):
+                feed_time, rows = parse_feed(kind, body)
+                path = store.write_snapshot(Snapshot(kind, feed_time, _fetched_at(stamp), "cf", rows))
+            elif kind == "waxpeer":
+                path = store.write_waxpeer(_fetched_at(stamp), "cf", parse_prices(body))
+            else:
+                path = store.write_skinport(_fetched_at(stamp), "cf", parse_items(body, True))
         except (ValueError, SchemaError):
             quarantine.mkdir(parents=True, exist_ok=True)
             (quarantine / f"{stamp}-{kind}.json").write_bytes(raw)
             bad += 1
             done.append(key)
             continue
-        path = store.write_snapshot(Snapshot(kind, feed_time, _fetched_at(stamp), "cf", rows))
         if not path.exists():
             continue
         imported += 1

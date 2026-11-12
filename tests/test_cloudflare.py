@@ -96,3 +96,17 @@ def test_same_snapshot_twice_is_one_file(tmp_path):
         import_raw(store, buffer(FakeWorker({key("asks"): feed("asks")})), tmp_path / "q")
     assert store.db.execute("SELECT count(*) FROM asks").fetchone()[0] == 1
     assert datetime.fromtimestamp(T, UTC)
+
+
+def test_imports_waxpeer_and_skinport_raw_files(tmp_path):
+    import polars as pl
+    wax = json.dumps({"success": True, "items": [{"name": "AK", "count": 4, "min": 10500}]}).encode()
+    sk = json.dumps([{"market_hash_name": "AK", "version": None, "min_price": 11.0, "median_price": 12.0,
+                      "quantity": 7}, {"market_hash_name": "Gone", "min_price": None, "quantity": 0}]).encode()
+    w = FakeWorker({key("waxpeer"): wax, key("skinport"): sk})
+    rep = import_raw(Store(tmp_path, in_memory=True), buffer(w), tmp_path / "q")
+    assert (rep.imported, rep.bad, rep.deleted) == (2, 0, 2) and not w.objects
+    waxdf = pl.read_parquet(next((tmp_path / "collector" / "waxpeer").rglob("*.parquet")))
+    skdf = pl.read_parquet(next((tmp_path / "collector" / "skinport").rglob("*.parquet")))
+    assert waxdf["min_price"].to_list() == [10.5] and waxdf["host"].to_list() == ["cf"]
+    assert skdf["market_hash_name"].to_list() == ["AK"] and skdf["tradable"].to_list() == [True]

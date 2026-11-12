@@ -2,8 +2,13 @@
 // R2 (no parsing, no compression: gzip costs 77-184 ms CPU against the free plan's 10 ms, S-10); the Mac
 // imports each file with `cs2 collect pull` and then deletes it here.
 const FEEDS = {
-  asks: "https://market.csgo.com/api/v2/prices/USD.json",
-  bids: "https://market.csgo.com/api/v2/prices/orders/USD.json",
+  asks: { url: "https://market.csgo.com/api/v2/prices/USD.json" },
+  bids: { url: "https://market.csgo.com/api/v2/prices/orders/USD.json" },
+  waxpeer: { url: "https://api.waxpeer.com/v1/prices?game=csgo&minified=1" },
+  // Only the tradable view: the full list differs by 0.3 % of items and would double the 15 MB raw size.
+  // Skinport answers 406 unless `br` is accepted.
+  skinport: { url: "https://api.skinport.com/v1/items?app_id=730&currency=USD&tradable=true",
+              headers: { "Accept-Encoding": "br" } },
 };
 const RAW = "raw/";
 const DEFAULT_MAX_BYTES = 8e9; // 80 % of R2's free 10 GB
@@ -22,7 +27,8 @@ async function fetchFeed(env, kind, iso) {
   const started = Date.now();
   const out = { kind, status: null, bytes: 0, fetch_ms: 0, error: null };
   try {
-    const r = await fetch(FEEDS[kind], { headers: { "User-Agent": "cs2trader-collector" } });
+    const feed = FEEDS[kind];
+    const r = await fetch(feed.url, { headers: { "User-Agent": "cs2trader-collector", ...feed.headers } });
     out.status = r.status;
     const body = await r.arrayBuffer();
     out.fetch_ms = Date.now() - started;
