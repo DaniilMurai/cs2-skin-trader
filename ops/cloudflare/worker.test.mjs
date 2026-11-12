@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { collect, handle, usageBytes } from "./worker.js";
+import worker, { collect, handle, usageBytes } from "./worker.js";
 
 class FakeBucket {
   constructor() { this.m = new Map(); }
@@ -30,10 +30,10 @@ test("a run stores every feed and a log entry", withFetch(200, 1000, async () =>
 }));
 
 test("stops adding files at the quota and says so", withFetch(200, 1000, async () => {
-  const env = { BUCKET: new FakeBucket(), MAX_BYTES: "6500" };
+  const env = { BUCKET: new FakeBucket(), MAX_BYTES: "35006000" };
   await collect(env, Date.now(), new Date("2026-01-01T00:07:00Z"));
   const second = await collect(env, Date.now(), new Date("2026-01-01T01:07:00Z"));
-  assert.equal(second.results.length, 4);          // 4000 < 6500: still room
+  assert.equal(second.results.length, 4);          // 4 feeds need 35 MB of room: 35,004,000 <= 35,006,000
   const third = await collect(env, Date.now(), new Date("2026-01-01T02:07:00Z"));
   assert.match(third.stopped, /quota/);
   assert.equal(third.results.length, 0);
@@ -78,3 +78,23 @@ test("list, get and delete only touch raw/ files", async () => {
   assert.equal((await del.json()).deleted, 1);
   assert.ok(env.BUCKET.m.has("log/x.json"));
 });
+
+test("a cron run fetches only its own group of feeds", withFetch(200, 1000, async () => {
+  const env = { BUCKET: new FakeBucket() };
+  const pending = [];
+  const ctx = { waitUntil: (p) => pending.push(p) };
+  await worker.scheduled({ cron: "11 * * * *", scheduledTime: Date.now() }, env, ctx);
+  await worker.scheduled({ cron: "7 * * * *", scheduledTime: Date.now() }, env, ctx);
+  await Promise.all(pending);
+  const raw = [...env.BUCKET.m.keys()].filter((k) => k.startsWith("raw/")).map((k) => k.split("/")[1]).sort();
+  assert.deepEqual(raw, ["asks", "bids", "skinport"]);
+}));
+
+test("the quota check leaves room for the files a run may add", withFetch(200, 1000, async () => {
+  // 1000 bytes used and a 15 MB skinport file may follow: with a 10 MB limit the run must not start
+  const env = { BUCKET: new FakeBucket(), MAX_BYTES: "10000000" };
+  await env.BUCKET.put("raw/asks/day=1/a.json", feedBody(1000));
+  const e = await collect(env, Date.now(), new Date(), ["skinport"]);
+  assert.match(e.stopped, /quota/);
+  assert.equal(e.results.length, 0);
+}));

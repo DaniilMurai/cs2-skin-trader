@@ -3,8 +3,9 @@ main = "worker.js"
 compatibility_date = "2026-11-01"
 
 [triggers]
-# :07 so the runs are independent of the Mac (:47) and GitHub (:17)
-crons = ["7 * * * *"]
+# :07 market.csgo, :09 Waxpeer, :11 Skinport, one invocation each (10 ms CPU per invocation on the free plan);
+# all clear of the Mac (:47) and GitHub (:17)
+crons = ["7 * * * *", "9 * * * *", "11 * * * *"]
 
 [[r2_buckets]]
 binding = "BUCKET"

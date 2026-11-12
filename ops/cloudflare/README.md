@@ -1,6 +1,6 @@
 # Cloudflare buffer for the hourly price feeds
 
-A Worker (cron `7 * * * *`) downloads the market.csgo asks and bids feeds, the Waxpeer prices and the Skinport items (tradable only) and stores the raw JSON in the R2
+A Worker (three crons: `7 * * * *` market.csgo asks+bids, `9 * * * *` Waxpeer, `11 * * * *` Skinport; one invocation each, because the free plan's 10 ms CPU limit is per invocation) downloads the market.csgo asks and bids feeds, the Waxpeer prices and the Skinport items (tradable only) and stores the raw JSON in the R2
 bucket `cs2-collector-spike`. Your Mac imports them with `cs2 collect pull` (hourly via launchd, which runs
 `cs2 collect pull --cf-only` after each collector run) and deletes each file from R2 once its Parquet snapshot
 exists. Sales polling stays on the Mac.
@@ -10,8 +10,10 @@ storage uses 7–13 ms (spike S-10, `docs/pipeline/spikes/FINDINGS.md`). Raw fil
 ~535 MB/day), so the Mac's import is what keeps the bucket small; with the Mac off the 8 GB guard
 stops new files after about 15 days.
 
-**Quota guard:** before each run the Worker sums the size of `raw/`; at `MAX_BYTES` (8 GB, 80 % of the free
-10 GB) it writes no new files and logs `stopped: quota…` instead. It resumes after the Mac imports.
+**Quota guard:** before each run the Worker sums the size of `raw/` and starts only if `used + room for the files
+the run may add` (5 MB per feed, 20 MB for Skinport) stays within `MAX_BYTES` (8 GB, 80 % of the free 10 GB), so the
+bucket never passes 8 GB. Otherwise it writes nothing and logs `stopped: quota…`. Every import deletes what it
+imported, so usage resets; 8 GB is reached only if imports fail for about 15 days in a row.
 
 ## Setup (once)
 ```bash

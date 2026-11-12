@@ -12,6 +12,11 @@ const FEEDS = {
 };
 const RAW = "raw/";
 const DEFAULT_MAX_BYTES = 8e9; // 80 % of R2's free 10 GB
+// One cron per group: the free plan's 10 ms CPU limit applies per invocation, so feeds in one run add up.
+const CRON_FEEDS = { "7 * * * *": ["asks", "bids"], "9 * * * *": ["waxpeer"], "11 * * * *": ["skinport"] };
+// A run is only started if the files it may add still fit under the limit (the largest feed is Skinport, ~15.5 MB).
+const FEED_MARGIN = { skinport: 20e6 };
+const DEFAULT_MARGIN = 5e6;
 
 export async function usageBytes(bucket) {
   let total = 0, cursor;
@@ -44,16 +49,17 @@ async function fetchFeed(env, kind, iso) {
   return out;
 }
 
-export async function collect(env, scheduledMs, now = new Date()) {
+export async function collect(env, scheduledMs, now = new Date(), kinds = Object.keys(FEEDS)) {
   const iso = now.toISOString().replace(/[:.]/g, "-");
   const maxBytes = Number(env.MAX_BYTES || DEFAULT_MAX_BYTES);
   const used = await usageBytes(env.BUCKET);
   const entry = { scheduled_at: new Date(scheduledMs).toISOString(), ran_at: now.toISOString(),
                   delay_s: (now.getTime() - scheduledMs) / 1000, used_bytes: used, results: [] };
-  if (used >= maxBytes) {
+  const need = kinds.reduce((n, k) => n + (FEED_MARGIN[k] || DEFAULT_MARGIN), 0);
+  if (used + need > maxBytes) {
     entry.stopped = "quota: raw files use " + used + " bytes, limit " + maxBytes + "; import them with `cs2 collect pull`";
   } else {
-    for (const kind of Object.keys(FEEDS)) entry.results.push(await fetchFeed(env, kind, iso));
+    for (const kind of kinds) entry.results.push(await fetchFeed(env, kind, iso));
   }
   await env.BUCKET.put(`log/${iso}.json`, JSON.stringify(entry));
   return entry;
@@ -106,7 +112,7 @@ export async function handle(request, env) {
 
 export default {
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(collect(env, event.scheduledTime));
+    ctx.waitUntil(collect(env, event.scheduledTime, new Date(), CRON_FEEDS[event.cron] || Object.keys(FEEDS)));
   },
   fetch: handle,
 };
