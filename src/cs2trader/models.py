@@ -114,7 +114,7 @@ class Fill:
     qty_filled: int
     price: float
     fee: float
-    reason: Literal["ok", "volume_cap", "locked", "no_cash", "no_position", "limit", "no_data"]
+    reason: Literal["ok", "volume_cap", "locked", "no_cash", "no_position", "limit", "no_data", "min_price"]
 
 
 @dataclass
@@ -135,6 +135,11 @@ class CostModel:
     withdraw_fee_steam: float = 0.02
     lock_days: int = 7
     cashout_hold_days: int = 8
+    # Measured on the USD asks feed of 2026-11-13: all 27,157 prices are whole thousandths, lowest 0.005
+    price_step: float = 0.001
+    min_price: float = 0.005
+    # Not published by market.csgo (spike S-03); a pessimistic placeholder, not a fact
+    min_fee: float = 0.01
 
 
 @dataclass(frozen=True)

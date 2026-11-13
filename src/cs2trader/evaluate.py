@@ -139,7 +139,7 @@ def make_spec(strategy: str, params: Mapping[str, Any], capital: float, start: d
     spread_k = settings.verdict.spread_stress if stress else 1.0
     costs = replace(c, seller_fee=c.seller_fee * cost_k, buyer_fee=c.buyer_fee * cost_k,
                     withdraw_fee_cash=c.withdraw_fee_cash * cost_k,
-                    withdraw_fee_steam=c.withdraw_fee_steam * cost_k)
+                    withdraw_fee_steam=c.withdraw_fee_steam * cost_k, min_fee=c.min_fee * cost_k)
     ratio = {}
     if f.ratio_source == "measured":
         # Silently falling back to the fixed number would label a fixed-ratio run as measured
