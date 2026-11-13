@@ -485,7 +485,7 @@ request and never keeps the file open; anything that writes runs as a subprocess
       Executor: main loop
       Depends on: T-40, T-38
 
-- [ ] T-42 — End-to-end check of the UI *(all pages and both forms ran live on a clone of the real data 2026-11-11; re-audit of `ui/` done 2026-11-13 on synthetic data, `docs/pipeline/reports/T-42-ui-audit.md`: AC-15 and AC-18 pass, AC-16 and AC-17 each fail one clause → T-63, T-64; still waits for the author to look)*
+- [x] T-42 — End-to-end check of the UI *(author confirmed 2026-11-13)* *(all pages and both forms ran live on a clone of the real data 2026-11-11; re-audit of `ui/` done 2026-11-13 on synthetic data, `docs/pipeline/reports/T-42-ui-audit.md`: AC-15 and AC-18 pass, AC-16 and AC-17 each fail one clause → T-63, T-64; still waits for the author to look)*
       Files: docs/pipeline/brief.md (How to run)
       Do: start `cs2 ui` on the real data clone, open every page in the built-in browser, edit a setting,
           start a backtest, compare its numbers with the CLI; write the commands into "How to run"
@@ -505,7 +505,7 @@ request and never keeps the file open; anything that writes runs as a subprocess
 
 - [x] T-44 — Worker with quota guard *(ops/cloudflare/worker.js; `node --test` 6 tests; deployed 2026-11-11, 13 runs ok, delay 0 s)*
 - [x] T-45 — Importer `cs2trader.sources.cloudflare` + `cs2 collect pull --cf-only` *(tests/test_cloudflare.py, 5 tests)*
-- [ ] T-46 — Switch on: rotate the token, add `CF_WORKER_URL`/`CF_WORKER_TOKEN` to `.env`, run `ops/install-launchd.sh`
+- [x] T-46 — *(checked 2026-11-13: both names in `.env`, launchd job loaded, 108 `-cf` files since 2026-11-11, hourly "3 files imported, 3 removed from R2" in `collect-mac.log`, 44 snapshots in 48 h, no gap > 2 h; `/status` itself not queried)* Switch on: rotate the token, add `CF_WORKER_URL`/`CF_WORKER_TOKEN` to `.env`, run `ops/install-launchd.sh`
       DoD: after two hours `cs2 collect status` counts `cf` snapshots and `/status` shows `used_bytes` falling after an import
       Executor: author (secrets), main loop (check)
 
