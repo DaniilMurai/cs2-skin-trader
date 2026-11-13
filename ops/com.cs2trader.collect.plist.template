@@ -8,8 +8,9 @@
     <array>
         <string>/bin/sh</string>
         <string>-c</string>
-        <string>@UV@ run cs2 collect run --kinds asks,bids,skinport,waxpeer --host mac; @UV@ run cs2 collect pull --cf-only</string>
+        <string>@UV@ run cs2 collect run --kinds asks,bids,skinport,waxpeer --host mac; @UV@ run cs2 collect pull --cf-only; @UV@ run cs2 collect run --kinds sales --host mac</string>
     </array>
+    <!-- Sales run last: the poll takes minutes and must not delay the hourly price snapshots. -->
     <key>WorkingDirectory</key>
     <string>@REPO@</string>
     <!-- StartCalendarInterval, unlike StartInterval, fires a missed run once after wake. -->
