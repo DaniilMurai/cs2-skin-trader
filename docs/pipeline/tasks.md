@@ -398,7 +398,7 @@ Until then they are skipped and the next task in order is taken.
 
 ## G. Forward paper test (Plan step 6, AC-14)
 
-- [ ] T-32 — Hourly bars and `cs2 forward` *(time-gated: ≥ 28 days)*
+- [ ] T-32 — Hourly bars and `cs2 forward` *(code and synthetic tests done 2026-11-13: 12 forward tests, choices in `reports/T-32.md`, engine and view also changed; the real run needs ≥ 28 days of snapshots, ~2026-12-07, and T-59 first)*
       Files: src/cs2trader/store.py, src/cs2trader/forward.py, src/cs2trader/cli.py,
              src/cs2trader/report.py, tests/test_forward.py
       Do: `hourly_bars` from asks/bids/sales (price, observed sales as volume, ask, bid);
@@ -546,10 +546,17 @@ request and never keeps the file open; anything that writes runs as a subprocess
       Executor: subagent
       Depends on: T-55
 
-- [ ] T-57 — Make `test_parallel_starts_take_one_slot` deterministic (failed 1 run in 3 under load: the fast `cash` job frees the slot before a late thread posts)
+- [x] T-57 — *(2026-11-13: the cause was the UI server's listen backlog of 5 dropping one of six connects; `request_queue_size = 32`; 20/20 passes)* Make `test_parallel_starts_take_one_slot` deterministic (failed 1 run in 3 under load: the fast `cash` job frees the slot before a late thread posts)
       Files: tests/test_ui.py
       DoD: the test passes 20 times in a row under `nice -n 19`
       Executor: subagent
       Depends on: T-55
 
 - [ ] T-58 — Cash-to-cash edge (market.csgo ↔ Skinport / Waxpeer) as a second `cs2 arbitrage` mode with its own sale model (sell at the then-lowest listing minus fee) *(proposed by T-47; after T-47's real run)*
+
+- [ ] T-59 — Before the real `cs2 forward` run: restrict hourly bars to the Steam universe plus held items (each decision now concatenates up to 45 days × ~27,000 items ≈ 29 M rows), then `cs2 backfill steam --refresh` *(from T-32)*
+      DoD: `cs2 forward` on ≥ 28 days of real snapshots finishes under `nice 19` without the Mac lagging; results equal the unrestricted run on a synthetic fixture
+      Executor: main loop
+      Depends on: T-32
+
+- [ ] T-60 — Sales in the local data: only one day (2026-11-09, 120 items) is present, so hourly `volume` is ~0. Check whether the GitHub collector's sales are in `cs2-skin-data` (`cs2 collect pull`), else add `sales` back to a collector or drop "observed sales as volume" from the contract *(from T-32; author decides)*
