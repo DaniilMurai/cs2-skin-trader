@@ -29,8 +29,16 @@ from cs2trader.collect import (
     worst_error,
 )
 from cs2trader.config import load_settings, optional_secret, require_secret
-from cs2trader.errors import ConfigError, Cs2Error, SteamAuthError
+from cs2trader.errors import ConfigError, Cs2Error, DataCheckFailed, SteamAuthError
 from cs2trader.evaluate import make_spec
+from cs2trader.forward import (
+    CHOICES,
+    MIN_DAYS,
+    forward,
+    save_rows,
+    snapshot_span,
+    summary_row,
+)
 from cs2trader.items import update_items
 from cs2trader.market.index import market_index
 from cs2trader.market.ratio import format_ratio, measured_spread, steam_to_market_ratio
@@ -177,6 +185,50 @@ def cmd_arbitrage(args: argparse.Namespace) -> None:
     print(f"hourly edge log and bought units: {out}")
 
 
+def parse_hour(text: str) -> datetime:
+    try:
+        t = datetime.fromisoformat(text)
+    except ValueError as e:
+        raise ConfigError(f"--from must be an ISO date or date-time (UTC), got {text!r}") from e
+    return t.replace(tzinfo=UTC) if t.tzinfo is None else t.astimezone(UTC)
+
+
+def cmd_forward(args: argparse.Namespace) -> None:
+    settings = load_settings()
+    params = parse_params(args.strategy, args.params)
+    try:
+        capitals = [float(c) for c in args.capital.split(",")] if args.capital else settings.capitals
+    except ValueError as e:
+        raise ConfigError(f"--capital must be comma-separated numbers: {e}") from e
+    store = Store(settings.data_dir)
+    _, first, last = snapshot_span(store)
+    if first is None:
+        raise DataCheckFailed(f"forward needs at least {args.min_days} days of hourly market.csgo snapshots, "
+                              "found 0; keep the collector running")
+    start = parse_hour(args.date_from) if args.date_from else first.replace(minute=0, second=0, microsecond=0)
+    end = last.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+    rows = []
+    for capital in capitals:
+        fwd = forward(REGISTRY[args.strategy], params, capital, store, start, end, settings, args.min_days)
+        out = save_run(fwd, settings.data_dir / "runs")
+        try:
+            # The same strategy and dates on Steam daily bars: the report's "backtest" column
+            bt = run(make_spec(args.strategy, params, capital, start.date(), end.date(), settings, store=store),
+                     store, settings)
+        except Cs2Error as e:
+            bt = None
+            print(f"backtest for the same dates skipped: {e}")
+        rows.append(row := summary_row(fwd, bt, start, end))
+        print(f"forward {fwd.run_id}  ${capital:,.0f}  {start:%Y-%m-%d %H:%M} .. {end:%Y-%m-%d %H:%M} UTC  "
+              f"hours {fwd.equity.height}  trades {row['n_trades']}  fees {row['fees_paid']:.2f}")
+        bt_text = "-" if bt is None else f"{row['bt_net_return_cash']:+.2%}"
+        print(f"  net return cash: forward {row['net_return_cash']:+.2%}, backtest {bt_text}; out: {out}")
+    save_rows(settings.data_dir / "forward" / "results.parquet", rows)
+    print("choices:")
+    for line in CHOICES:
+        print(f"  {line}")
+
+
 def cmd_ui(args: argparse.Namespace) -> None:
     from cs2trader.ui.server import serve
 
@@ -295,6 +347,14 @@ def main() -> None:
     bt.add_argument("--to", dest="date_to", required=True)
     bt.add_argument("--params", default="{}")
     bt.set_defaults(func=cmd_backtest)
+
+    fw = sub.add_parser("forward", help="paper test: a strategy hour by hour on the market.csgo snapshots")
+    fw.add_argument("--strategy", required=True)
+    fw.add_argument("--from", dest="date_from", help="first decision hour, ISO, UTC; default: the first snapshot")
+    fw.add_argument("--capital", help="comma-separated; default: capitals from cs2.toml")
+    fw.add_argument("--params", default="{}")
+    fw.add_argument("--min-days", type=int, default=MIN_DAYS, help="days of snapshots required")
+    fw.set_defaults(func=cmd_forward)
 
     rp = sub.add_parser("report")
     rp.add_argument("--strategies", help="comma-separated subset; cash and bh_universe are always included")
