@@ -147,7 +147,7 @@ def make_spec(strategy: str, params: Mapping[str, Any], capital: float, start: d
             raise ConfigError("fills.ratio_source = \"measured\" needs the store to read steam_to_market_ratio")
         ratio = load_fill_ratios(store)
     fills = FillModel(participation_cap=f.participation_cap, spread_penalty=f.spread_penalty * spread_k,
-                      ratio=ratio, ratio_fallback=f.ratio_fallback)
+                      ratio=ratio, ratio_fallback=f.ratio_fallback, position_cap=f.position_cap)
     return RunSpec(strategy, dict(params), capital, start, end, costs=(costs,), fills=fills)
 
 

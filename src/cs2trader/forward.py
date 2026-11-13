@@ -67,6 +67,10 @@ class HourlyData:
         frames = [self.by_day[h] for h in self.days[lo:bisect.bisect_right(self.days, now)]]
         return pl.concat(frames) if frames else self._empty
 
+    def median_volumes(self, now: datetime, names: set[str]) -> dict[str, float]:
+        # Same day rule as HourMarket: today's Steam bar is still forming.
+        return self.daily.median_volumes(now.date() - timedelta(days=1), names)
+
 
 class HourMarket:
     def __init__(self, data: HourlyData, now: datetime) -> None:
@@ -87,6 +91,9 @@ class HourMarket:
 
     def universe(self) -> list[str]:
         return self._data.daily.universe_on(self._day)
+
+    def liquidity(self) -> pl.DataFrame:
+        return self._data.daily.liquidity_on(self._day)
 
     def items(self) -> pl.DataFrame:
         return self._data.daily.items
@@ -128,7 +135,8 @@ def forward(entry: StrategyEntry, params: Mapping[str, Any], capital: float, sto
     daily = load_market(store, start.date(), end.date(), settings)
     c = settings.costs
     spec = RunSpec(entry.name, dict(params), capital, start.date(), end.date(), freq="1h", costs=(c,),
-                   fills=FillModel(participation_cap=settings.fills.participation_cap, spread_penalty=0.0))
+                   fills=FillModel(participation_cap=settings.fills.participation_cap, spread_penalty=0.0,
+                                   position_cap=settings.fills.position_cap))
     # The exact hours and the newest snapshot are part of the run identity; daily data stays in data_version.
     version = f"+{start.isoformat()}..{end.isoformat()}@{store.snapshot_version()}"
     return run(spec, store, settings, HourlyData(bars.filter(pl.col("t") <= end), daily, version))

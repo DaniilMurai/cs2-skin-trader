@@ -12,7 +12,7 @@ from cs2trader.config import RegimesSettings, UniverseSettings
 from cs2trader.errors import LookAheadError
 from cs2trader.market.index import market_index
 from cs2trader.market.regimes import label_regimes
-from cs2trader.market.universe import WINDOW_DAYS, universe
+from cs2trader.market.universe import WINDOW_DAYS, liquidity, members
 from cs2trader.models import Lot, Regime
 
 
@@ -21,6 +21,7 @@ class MarketView(Protocol):
 
     def history(self, lookback: int) -> pl.DataFrame: ...
     def universe(self) -> list[str]: ...
+    def liquidity(self) -> pl.DataFrame: ...
     def items(self) -> pl.DataFrame: ...
     def index(self, by: Literal["all", "category"], lookback: int) -> pl.DataFrame: ...
     def regime(self) -> Regime: ...
@@ -53,6 +54,7 @@ class MarketData:
         labels = label_regimes(self.index["all"], rs)
         self.regimes: dict[date, str] = dict(zip(labels["t"].to_list(), labels["regime"].to_list()))
         self._universe: dict[date, list[str]] = {}
+        self._liquidity: dict[date, pl.DataFrame] = {}
         self._empty = bars.clear()
 
     def export(self, directory: Path) -> None:
@@ -61,7 +63,7 @@ class MarketData:
         pages), everything small as a pickle."""
         sizes = [self.by_day[d].height for d in self.days]
         pl.concat([self.by_day[d] for d in self.days]).write_ipc(directory / "bars.arrow", compression="uncompressed")
-        small = {k: v for k, v in self.__dict__.items() if k not in ("by_day", "_universe")}
+        small = {k: v for k, v in self.__dict__.items() if k not in ("by_day", "_universe", "_liquidity")}
         (directory / "market.pkl").write_bytes(pickle.dumps((small, sizes)))
 
     @classmethod
@@ -73,6 +75,7 @@ class MarketData:
         starts = [0, *accumulate(sizes)]
         self.by_day = {d: bars.slice(starts[i], sizes[i]) for i, d in enumerate(self.days)}
         self._universe = {}
+        self._liquidity = {}
         return self
 
     def view(self, now: date) -> BarMarket:
@@ -84,9 +87,18 @@ class MarketData:
 
     def universe_on(self, now: date) -> list[str]:
         if now not in self._universe:
-            first = self.first_t.filter(pl.col("first_t") <= now)
-            self._universe[now] = universe(self.window(now, WINDOW_DAYS), now, self.us, first)
+            self._universe[now] = members(self.liquidity_on(now), now, self.us)
         return self._universe[now]
+
+    def liquidity_on(self, now: date) -> pl.DataFrame:
+        if now not in self._liquidity:
+            first = self.first_t.filter(pl.col("first_t") <= now)
+            self._liquidity[now] = liquidity(self.window(now, WINDOW_DAYS), now, first)
+        return self._liquidity[now]
+
+    def median_volumes(self, now: date, names: set[str]) -> dict[str, float]:
+        rows = self.liquidity_on(now).filter(pl.col("market_hash_name").is_in(names))
+        return dict(zip(rows["market_hash_name"].to_list(), rows["median_volume"].to_list()))
 
     def _days_in(self, lo: date, hi: date) -> Sequence[date]:
         return self.days[bisect.bisect_right(self.days, lo):bisect.bisect_right(self.days, hi)]
@@ -109,6 +121,9 @@ class BarMarket:
 
     def universe(self) -> list[str]:
         return self._data.universe_on(self.now)
+
+    def liquidity(self) -> pl.DataFrame:
+        return self._data.liquidity_on(self.now)
 
     def items(self) -> pl.DataFrame:
         return self._data.items
