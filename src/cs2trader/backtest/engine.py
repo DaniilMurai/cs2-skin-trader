@@ -63,17 +63,21 @@ def _ratio(row: Mapping[str, Any], fills: FillModel) -> float:
     return fills.ratio.get(row.get("category"), fills.ratio_fallback)
 
 
-def _cap(volume: int, share: float) -> int:
+def _cap(volume: float, share: float) -> int:
     # 0.29 * 100 == 28.999999999999996 in floats; the epsilon keeps whole caps whole.
     return math.floor(volume * share + 1e-9)
 
 
 def apply_fills(orders: Sequence[Order], bar: pl.DataFrame, book: Book,
-                cost: CostModel, fills: FillModel, quotes: bool = False) -> list[Fill]:
+                cost: CostModel, fills: FillModel, quotes: bool = False,
+                median_volume: Mapping[str, float] | None = None) -> list[Fill]:
     """`quotes` (hourly market.csgo bars): a buy takes the bar's ask and a sell its bid, with no
-    ratio or spread penalty, one unit per item and side per bar; a missing quote fills nothing."""
+    ratio or spread penalty, one unit per item and side per bar; a missing quote fills nothing.
+    `median_volume` (per item, as known on the decision day) feeds `fills.position_cap`."""
     if not orders:
         return []
+    if fills.position_cap > 0 and median_volume is None:
+        raise InvariantViolation("fills.position_cap is set but no median volumes were passed")
     t = bar["t"][0]
     wanted = {o.market_hash_name for o in orders}
     rows = {r["market_hash_name"]: r
@@ -115,8 +119,18 @@ def apply_fills(orders: Sequence[Order], bar: pl.DataFrame, book: Book,
         if o.side == "buy":
             unit = price + per_unit_fee
             affordable = math.floor(book.balance / unit + 1e-9)
-            qty = min(o.qty, cap, affordable)
-            reason = "ok" if qty == o.qty else ("volume_cap" if qty == cap else "no_cash")
+            room = o.qty
+            if fills.position_cap > 0:
+                # An item with no known median volume gets no room: unknown liquidity is not liquidity.
+                held = sum(l.qty for l in book.lots if l.market_hash_name == o.market_hash_name)
+                room = max(_cap(median_volume.get(o.market_hash_name, 0.0), fills.position_cap) - held, 0)
+            qty = min(o.qty, cap, affordable, room)
+            if qty == o.qty:
+                reason = "ok"
+            elif qty == cap:
+                reason = "volume_cap"
+            else:
+                reason = "position_cap" if qty == room else "no_cash"
             if qty > 0:
                 if book.balance - qty * unit < -1e-6:
                     raise InvariantViolation(f"overspend: balance {book.balance} < cost {qty * unit} for {o}")
@@ -207,10 +221,11 @@ def run(spec: RunSpec, store: Store, settings: Settings | None = None,
     equity: list[EquityPoint] = []
     pending: list[Order] = []
     last_sale: date | None = None
+    medians: dict[str, float] | None = None
     for i, t in enumerate(days):
         today = data.by_day[t]
         cost = cost_at(spec.costs, t)
-        trades += (done := apply_fills(pending, today, book, cost, spec.fills, hourly))
+        trades += (done := apply_fills(pending, today, book, cost, spec.fills, hourly, medians))
         if sold := [f.t for f in done if f.side == "sell" and f.qty_filled]:
             last_sale = max(sold)
         held = {l.market_hash_name for l in book.lots}
@@ -223,10 +238,20 @@ def run(spec: RunSpec, store: Store, settings: Settings | None = None,
         for o in pending:
             if o.qty <= 0:
                 raise InvariantViolation(f"strategy {spec.strategy} ordered {o}")
+        if spec.fills.position_cap > 0:
+            # Taken on the decision bar, not the fill bar: the cap may only use what the strategy could see.
+            medians = data.median_volumes(t, {o.market_hash_name for o in pending})
     data_version = store.data_version() + data.version
-    spec_json = json.dumps(asdict(spec), default=str, sort_keys=True)
+    spec_d, universe_d = asdict(spec), asdict(settings.universe)
+    # Limits added after runs were already stored stay out of the identity while switched off,
+    # so those runs keep their run_id.
+    if not spec.fills.position_cap:
+        del spec_d["fills"]["position_cap"]
+    if not settings.universe.max_price_usd:
+        del universe_d["max_price_usd"]
+    spec_json = json.dumps(spec_d, default=str, sort_keys=True)
     # Universe and regime settings change what strategies see, so they are part of the run identity.
-    view_json = json.dumps([asdict(settings.universe), asdict(settings.regimes), events_hash()], sort_keys=True)
+    view_json = json.dumps([universe_d, asdict(settings.regimes), events_hash()], sort_keys=True)
     run_id = hashlib.sha256((spec_json + view_json + data_version).encode()).hexdigest()[:16]
     return RunResult(
         run_id, spec, data_version,

@@ -64,6 +64,8 @@ class UniverseSettings:
     min_history_days: int = 30
     min_median_volume: int = 5
     min_price_usd: float = 0.10
+    # 0 = no upper bound; small-budget runs set it so items dearer than the budget drop out
+    max_price_usd: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -81,6 +83,8 @@ class RatioSettings:
 @dataclass(frozen=True)
 class FillsSettings:
     participation_cap: float = 0.20
+    # Share of an item's median daily volume one position may reach; 0 = off, AC-19(d) asks for 0.05
+    position_cap: float = 0.0
     spread_penalty: float = 0.03
     ratio_source: Literal["measured", "fixed"] = "fixed"
     ratio_fallback: float = 1.0

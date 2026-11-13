@@ -114,7 +114,8 @@ class Fill:
     qty_filled: int
     price: float
     fee: float
-    reason: Literal["ok", "volume_cap", "locked", "no_cash", "no_position", "limit", "no_data", "min_price"]
+    reason: Literal["ok", "volume_cap", "locked", "no_cash", "no_position", "limit", "no_data", "min_price",
+                    "position_cap"]
 
 
 @dataclass
@@ -148,6 +149,8 @@ class FillModel:
     spread_penalty: float = 0.03
     ratio: Mapping[str, float] = field(default_factory=dict)
     ratio_fallback: float = 1.0
+    # Units held plus the order may not exceed this share of the item's median daily volume; 0 = off
+    position_cap: float = 0.0
 
 
 @dataclass(frozen=True)
