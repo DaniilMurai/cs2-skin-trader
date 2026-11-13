@@ -29,6 +29,9 @@ CREATE TABLE IF NOT EXISTS variants_tried (
     PRIMARY KEY (strategy, params_json, fold, capital));
 CREATE TABLE IF NOT EXISTS regimes (
     t DATE PRIMARY KEY, index_level DOUBLE, ret DOUBLE, regime VARCHAR);
+CREATE TABLE IF NOT EXISTS steam_to_market_ratio (
+    category VARCHAR, side VARCHAR, median DOUBLE, q25 DOUBLE, q75 DOUBLE, n_items INTEGER,
+    fallback BOOLEAN, PRIMARY KEY (category, side));
 """
 
 
@@ -250,6 +253,13 @@ class Store:
         self.db.execute("DELETE FROM regimes")
         self.db.execute("INSERT INTO regimes SELECT t, index_level, ret, regime FROM labels")
         return labels.height
+
+    def write_ratio(self, ratio: pl.DataFrame) -> int:
+        # Replaced wholesale: the table is one calibration, not a history
+        self.db.execute("DELETE FROM steam_to_market_ratio")
+        self.db.execute("INSERT INTO steam_to_market_ratio SELECT category, side, median, q25, q75, n_items, "
+                        "fallback FROM ratio")
+        return ratio.height
 
     def record_variants(self, rows: Sequence[tuple[str, str, int, float, str]]) -> None:
         self.db.executemany("INSERT OR REPLACE INTO variants_tried VALUES (?, ?, ?, ?, ?)", rows)

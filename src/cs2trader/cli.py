@@ -24,6 +24,7 @@ from cs2trader.errors import ConfigError, Cs2Error, SteamAuthError
 from cs2trader.evaluate import make_spec
 from cs2trader.items import update_items
 from cs2trader.market.index import market_index
+from cs2trader.market.ratio import format_ratio, measured_spread, steam_to_market_ratio
 from cs2trader.market.regimes import label_regimes
 from cs2trader.sources import fx, steam
 from cs2trader.store import Store
@@ -133,6 +134,14 @@ def cmd_regimes(args: argparse.Namespace) -> None:
         print(f"  {row['start']} → {row['end']}  {row['regime']}")
 
 
+def cmd_ratio(args: argparse.Namespace) -> None:
+    settings = load_settings()
+    store = Store(settings.data_dir)
+    ratio = steam_to_market_ratio(store, settings.ratio)
+    print(format_ratio(ratio, measured_spread(store, settings.ratio)))
+    print(f"stored {store.write_ratio(ratio)} rows in steam_to_market_ratio")
+
+
 def cmd_ui(args: argparse.Namespace) -> None:
     from cs2trader.ui.server import serve
 
@@ -220,6 +229,8 @@ def main() -> None:
     rg = sub.add_parser("regimes")
     rg.add_argument("--last", type=int, default=15, help="print the last N regime runs")
     rg.set_defaults(func=cmd_regimes)
+
+    sub.add_parser("ratio", help="Steam to market.csgo price ratio and spread per category").set_defaults(func=cmd_ratio)
 
     co = sub.add_parser("collect").add_subparsers(required=True)
     cr = co.add_parser("run")
