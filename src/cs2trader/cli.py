@@ -17,6 +17,8 @@ from cs2trader.arbitrage import (
     simulate,
     steam_bars,
 )
+from cs2trader.arbitrage_cross import CrossParams
+from cs2trader.arbitrage_cross import run as run_cross
 from cs2trader.backfill import backfill, feed_universe, read_names, request_logger
 from cs2trader.backtest.engine import run
 from cs2trader.backtest.runs import save_run
@@ -168,8 +170,14 @@ def cmd_arbitrage(args: argparse.Namespace) -> None:
         capitals = [float(c) for c in args.capital.split(",")] if args.capital else settings.capitals
     except ValueError as e:
         raise ConfigError(f"--capital must be comma-separated numbers: {e}") from e
-    p = ArbParams(min_days=args.min_days, min_edge=args.min_edge, volume_share=args.volume_share)
     store = Store(settings.data_dir)
+    if getattr(args, "mode", "wallet") == "cross":
+        # Small budgets are the question here (AC-19), not the report's default capitals
+        capitals = capitals if args.capital else [50.0, 100.0]
+        print("\n".join(run_cross(store, settings.data_dir / "arbitrage", capitals,
+                                  CrossParams(min_days=args.min_days, min_edge=args.min_edge))))
+        return
+    p = ArbParams(min_days=args.min_days, min_edge=args.min_edge, volume_share=args.volume_share)
     first = store.db.execute("SELECT min(CAST(feed_time AS DATE)) FROM asks").fetchall()[0][0]
     bars = steam_bars(store, first) if first else None
     edges = hourly_edges(store, p, bars)
@@ -320,7 +328,9 @@ def main() -> None:
     sub.add_parser("ratio", help="Steam to market.csgo price ratio and spread per category").set_defaults(func=cmd_ratio)
 
     ar = sub.add_parser("arbitrage", help="paper test: buy on market.csgo, sell on Steam after the trade lock")
-    ar.add_argument("--capital", help="comma-separated; default: capitals from cs2.toml")
+    ar.add_argument("--mode", choices=["wallet", "cross"], default="wallet",
+                    help="cross: buy on one of market.csgo / Waxpeer / Skinport, sell on another for cash")
+    ar.add_argument("--capital", help="comma-separated; default: capitals from cs2.toml (cross: 50,100)")
     ar.add_argument("--min-days", type=int, default=ArbParams.min_days, help="days of ask snapshots required")
     ar.add_argument("--min-edge", type=float, default=ArbParams.min_edge)
     ar.add_argument("--volume-share", type=float, default=ArbParams.volume_share,
