@@ -407,16 +407,34 @@ function showJob(j) {
   const what = `${esc(s ? s.label : j.strategy)}, ${fmtMoney(j.capital)}, ${esc(fmtDate(j.start))} → ${esc(fmtDate(j.end))}`;
   const log = `<details><summary>Show the log</summary><pre tabindex="0">${esc((j.lines || []).join("\n") || "(no output yet)")}</pre></details>`;
   if (j.state === "running") {
+    const tick = () => { const e = $("#elapsed"); if (e) e.textContent = clock(Date.now() / 1000 - j.started); else clearInterval(tickTimer); };
+    tickTimer = setInterval(tick, 1000);
+    // Each poll only refreshes the log: rebuilding the card would take keyboard focus off the Stop button.
+    if ($("[data-act=stop-job]", el)) { $("pre", el).textContent = (j.lines || []).join("\n") || "(no output yet)"; return; }
     el.innerHTML = `<div class="card job" role="status"><div class="jobhead"><span class="spinner" aria-hidden="true"></span><b>Running: ${what}</b></div>
-      <p>Elapsed <b id="elapsed">${clock(Date.now() / 1000 - j.started)}</b>. A year takes roughly a minute; the full history takes several minutes. You can leave this page or close the browser: the run continues, and the result will be listed under “Earlier runs”.</p>${log}</div>`;
-    tickTimer = setInterval(() => { const e = $("#elapsed"); if (e) e.textContent = clock(Date.now() / 1000 - j.started); else clearInterval(tickTimer); }, 1000);
+      <p>Elapsed <b id="elapsed">${clock(Date.now() / 1000 - j.started)}</b>. A year takes roughly a minute; the full history takes several minutes. You can leave this page or close the browser: the run continues, and the result will be listed under “Earlier runs”. It runs at low priority, so the computer stays usable.</p>
+      <p><button type="button" class="ghost" data-act="stop-job">Stop this run</button></p>${log}</div>`;
   } else if (j.state === "done") {
     el.innerHTML = `<div class="card job done" role="status"><b>✓ Finished: ${what}</b>
       <p>Took ${clock((j.finished || j.started) - j.started)}. ${j.run_id ? `<a class="primary btn" href="#/runs/${esc(j.run_id)}">Open the result →</a>` : ""}</p>${log}</div>`;
+  } else if (j.state === "stopped") {
+    el.innerHTML = `<div class="card job" role="status"><b>Stopped: ${what}</b>
+      <p>You stopped this run after ${clock((j.finished || j.started) - j.started)}. You can start another one above.</p>${log}</div>`;
   } else {
     el.innerHTML = `<div class="card job failed" role="alert"><b>The run did not finish: ${what}</b><p>${esc(jobProblem(j.lines))}</p>${log.replace("<details>", "<details open>")}</div>`;
   }
 }
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest && e.target.closest("[data-act=stop-job]");
+  if (!b) return;
+  b.disabled = true;
+  b.textContent = "Stopping…";
+  clearTimeout(jobTimer);
+  // A stopped run must not send the page on to a result.
+  state.started = false;
+  try { await post("/api/jobs/stop", {}); } catch (ex) { /* the poll below shows the real state */ }
+  pollJob();
+});
 async function pollJob(quiet) {
   clearTimeout(jobTimer);
   let j;
