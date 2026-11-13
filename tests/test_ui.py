@@ -137,10 +137,14 @@ def test_post_and_error_bodies_redact_every_secret(env, monkeypatch):
         assert status == 400 and value.encode() not in body and b"[redacted]" in body, name
         status, body = call(app, "POST", "/api/settings", {"changes": {value: 1}})
         assert status == 422 and value.encode() not in body and b"[redacted]" in body, name
-        # 5xx: exception text is echoed by both handlers
-        status, body = call(app, "GET", f"/api/collector?hours={echoed}")
-        assert status == 500 and value.encode() not in body and b"[redacted]" in body, name
 
+    # 5xx: exception text is echoed by both handlers (a bad ?hours is now a 400, so force the failure)
+    monkeypatch.setattr("cs2trader.ui.api.collector", lambda *a, **k: (_ for _ in ()).throw(
+        RuntimeError(" ".join(SECRETS.values()))))
+    status, body = call(app, "GET", "/api/collector")
+    assert status == 500 and body.count(b"[redacted]") == 4
+    for value in SECRETS.values():
+        assert value.encode() not in body
     def boom(*a, **k):
         raise RuntimeError(" ".join(SECRETS.values()))
     monkeypatch.setattr(app.jobs, "start_backtest", boom)
@@ -234,6 +238,43 @@ def test_invalid_setting_is_rejected_and_file_unchanged(env):
     status, _ = call(app, "POST", "/api/settings", {"changes": {"steam.interval_s": 0.1}})
     assert status == 422
     assert app.config_path.read_text() == before
+
+
+@pytest.mark.parametrize("changes", [{"capitals": [float("inf")]}, {"capitals": [100, float("nan")]},
+                                     {"fills.spread_penalty": float("nan")}, {"fills.spread_penalty": float("inf")},
+                                     [1], "x"])
+def test_non_finite_numbers_and_non_object_changes_are_422_and_file_unchanged(env, changes):
+    app, _ = env
+    before = app.config_path.read_text()
+    status, body = call(app, "POST", "/api/settings", {"changes": changes})
+    assert status == 422 and json.loads(body)["errors"]
+    assert app.config_path.read_text() == before
+    assert not app.config_path.with_suffix(".toml.bak").exists()
+
+
+def test_unchanged_save_leaves_file_and_backup_alone(env):
+    app, _ = env
+    assert call(app, "POST", "/api/settings", {"changes": {"fills.spread_penalty": 0.04}})[0] == 200
+    bak = app.config_path.with_suffix(".toml.bak")
+    old, saved = bak.read_text(), app.config_path.read_text()
+    status, body = call(app, "POST", "/api/settings", {"changes": {"fills.spread_penalty": 0.04}})
+    assert status == 200 and json.loads(body)["ok"]
+    assert call(app, "POST", "/api/settings", {"changes": {}})[0] == 200
+    assert bak.read_text() == old and app.config_path.read_text() == saved
+
+
+def test_bad_content_length_and_query_ints_are_400(env):
+    app, _ = env
+    for length in ("-1", "abc"):
+        conn = http.client.HTTPConnection("127.0.0.1", app.port, timeout=5)
+        conn.putrequest("POST", "/api/settings", skip_host=True)
+        for k, v in {"Host": f"127.0.0.1:{app.port}", TOKEN_HEADER: app.token, "Content-Length": length}.items():
+            conn.putheader(k, v)
+        conn.endheaders()
+        assert conn.getresponse().status == 400, length
+        conn.close()
+    for path in ("/api/market/categories?days=abc", "/api/collector?hours=1.5"):
+        assert call(app, "GET", path)[0] == 400, path
 
 
 def test_valid_setting_is_written_with_backup(env):

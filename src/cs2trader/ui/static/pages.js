@@ -233,6 +233,8 @@ pages.runs = {
   async html(arg, arg2) {
     if (arg && arg !== "new") return runDetail(arg);
     const [list, st, ov, se] = await Promise.all([get("/api/runs"), get("/api/strategies"), get("/api/overview"), get("/api/settings")]);
+    // While the database is busy the last price day is unknown: claim no date and pre-fill none.
+    const known = ov.state !== "busy" && !!ov.last_day;
     const last = ov.last_day || isoDay(Date.now());
     const holdout = settingValue(se, "wf.holdout_start"), wfStart = settingValue(se, "wf.start"), wfEnd = settingValue(se, "wf.end");
     const back = (days) => isoDay(parseT(last) - days * 864e5);
@@ -241,7 +243,7 @@ pages.runs = {
       {id: "holdout", label: "Final test period", from: holdout, to: last},
       {id: "tuning", label: `Tuning years (${wfStart.slice(0, 4)}–${wfEnd.slice(0, 4)})`, from: wfStart, to: wfEnd},
       {id: "all", label: `Everything since ${wfStart.slice(0, 4)}`, from: wfStart, to: last},
-    ].filter((p) => p.from < p.to);
+    ].filter((p) => known && p.from < p.to);
     pages.runs.ctx = {st, presets, list};
     const pick = stratByName(st, arg2) ? arg2 : "v1_dip_knives";
     // The video's strategies first, the yardsticks last.
@@ -266,9 +268,9 @@ pages.runs = {
       </fieldset>
       <fieldset><legend><span class="stepn">3</span> Which period to replay</legend>
         <div class="chips" role="group" aria-label="Period presets">${presets.map((p, i) => `<button type="button" class="chip" data-preset="${p.id}" aria-pressed="${i === 0}">${esc(p.label)}</button>`).join("")}</div>
-        <div class="row"><label class="field">From <input id="rf-start" type="date" value="${esc(presets[0] ? presets[0].from : back(365))}"></label>
-        <label class="field">To <input id="rf-end" type="date" value="${esc(presets[0] ? presets[0].to : last)}"></label></div>
-        <p class="fhelp">Price history is available up to ${esc(fmtDate(last))}. The ${term("holdout", "final test period")} starts ${esc(fmtDate(holdout))}. Longer periods take longer to run.</p>
+        <div class="row"><label class="field">From <input id="rf-start" type="date" value="${esc(presets[0] ? presets[0].from : known ? back(365) : "")}"></label>
+        <label class="field">To <input id="rf-end" type="date" value="${esc(presets[0] ? presets[0].to : known ? last : "")}"></label></div>
+        <p class="fhelp">${known ? `Price history is available up to ${esc(fmtDate(last))}. ` : "The latest price date is unknown while the database is busy; type the dates yourself. "}The ${term("holdout", "final test period")} starts ${esc(fmtDate(holdout))}. Longer periods take longer to run.</p>
       </fieldset>
       <fieldset><legend><span class="stepn">4</span> Strategy settings <span class="muted">(optional)</span></legend>
         <div id="pfields"></div>
@@ -323,6 +325,8 @@ pages.runs = {
       $("#rf-go", root).disabled = true;
       const r = await post("/api/jobs", {strategy: current().name, params, capital: cap.value, start, end});
       $("#rf-go", root).disabled = false;
+      // A disabled button drops focus to <body>; give it back so keyboard users stay in the form.
+      $("#rf-go", root).focus();
       if (r.status === 409) { err.innerHTML = `<div class="banner amber"><b>Busy.</b> ${r.body.error && r.body.error.includes("already running") ? "Another backtest is still running. Wait for it to finish, then try again." : "Another job is using the database (a report, a download or the collector). Try again when it finishes."}</div>`; return; }
       if (r.status >= 400) { err.innerHTML = `<div class="banner red"><b>Could not start the run.</b> ${esc(r.body.error || "Unknown error")}</div>`; return; }
       state.started = true;

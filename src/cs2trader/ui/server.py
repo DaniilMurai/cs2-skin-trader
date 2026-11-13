@@ -27,6 +27,17 @@ MAX_BODY = 64 * 1024
 REPORT_PATH = re.compile(r"^/reports/(\d{4}-\d{2}-\d{2})/report\.html$")
 
 
+class BadRequest(ValueError):
+    pass
+
+
+def _int_param(q: dict, name: str, default: int) -> int:
+    try:
+        return int(q.get(name, default))
+    except ValueError:
+        raise BadRequest(f"{name}: must be an integer") from None
+
+
 class App:
     def __init__(self, settings: Settings | None = None, config_path: Path = Path("cs2.toml"),
                  env_path: Path = Path(".env"), port: int = 0) -> None:
@@ -76,6 +87,8 @@ def make_handler(app: App):
             path, q = url.path, {k: v[0] for k, v in parse_qs(url.query).items()}
             try:
                 self._route_get(path, q)
+            except BadRequest as e:
+                self._json(HTTPStatus.BAD_REQUEST, {"error": str(e)})
             except Exception as e:  # noqa: BLE001 - a failing page must not kill the server
                 self._json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"{type(e).__name__}: {e}"})
 
@@ -100,10 +113,10 @@ def make_handler(app: App):
                 "/api/verdict": lambda: api.verdict(ctx, q.get("day")),
                 "/api/runs": lambda: api.runs(ctx),
                 "/api/market/index": lambda: api.market_index_series(ctx),
-                "/api/market/categories": lambda: api.market_categories(ctx, int(q.get("days", 730))),
+                "/api/market/categories": lambda: api.market_categories(ctx, _int_param(q, "days", 730)),
                 "/api/market/search": lambda: api.market_item_search(ctx, q.get("q", "")),
                 "/api/market/item": lambda: api.market_item(ctx, q.get("name", "")),
-                "/api/collector": lambda: api.collector(ctx, int(q.get("hours", 48))),
+                "/api/collector": lambda: api.collector(ctx, _int_param(q, "hours", 48)),
                 "/api/strategies": lambda: {**api.strategies(),
                                             "defaults": settings_api.load_strategy_defaults(ctx.data_dir)},
                 "/api/settings": lambda: settings_api.describe(ctx.settings),
@@ -121,7 +134,14 @@ def make_handler(app: App):
                 return
             if not token_ok(self.headers.get(TOKEN_HEADER), app.token):
                 return self._json(HTTPStatus.FORBIDDEN, {"error": "missing or wrong token"})
-            length = int(self.headers.get("Content-Length") or 0)
+            try:
+                length = int(self.headers.get("Content-Length") or 0)
+            except ValueError:
+                length = -1
+            if length < 0:
+                # Close the connection: an unread body of unknown size would poison keep-alive.
+                self.close_connection = True
+                return self._json(400, {"error": "bad Content-Length"})
             if length > MAX_BODY:
                 return self._json(413, {"error": "body too large"})
             try:
