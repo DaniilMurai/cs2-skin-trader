@@ -121,11 +121,11 @@ def evaluate_all(store: Store, settings: Settings, strategies: list[str] | None 
     def one(runner, capital: float, name: str):
         entry = REGISTRY[name]
         wf = walk_forward(entry, capital, store, wf_s, settings, runner=runner)
-        ho = runner.submit_run(holdout_spec(entry, wf.chosen_params, capital, wf_s, end, False, settings))
-        ho_s = runner.submit_run(holdout_spec(entry, wf.chosen_params, capital, wf_s, end, True, settings))
+        ho = runner.submit_run(holdout_spec(entry, wf.chosen_params, capital, wf_s, end, False, settings, store))
+        ho_s = runner.submit_run(holdout_spec(entry, wf.chosen_params, capital, wf_s, end, True, settings, store))
         extra = []
         if name == "bh_universe":
-            extra = [runner.submit_run(make_spec(name, {"seed": k}, capital, wf_s.holdout_start, end, settings))
+            extra = [runner.submit_run(make_spec(name, {"seed": k}, capital, wf_s.holdout_start, end, settings, store=store))
                      for k in range(1, BASKETS)]
         out = wf, ho.result(), ho_s.result(), [f.result() for f in extra]
         done.append(name)
@@ -262,9 +262,13 @@ def _sensitivity(results: pl.DataFrame, capitals: list[float], settings: Setting
 
 def _assumptions(store: Store, settings: Settings, end) -> str:
     f, c = settings.fills, settings.costs
-    ratio = ("fixed" if f.ratio_source == "fixed" else "measured (fallback used where unmeasured)")
+    if f.ratio_source == "fixed":
+        ratio = f"fixed, {f.ratio_fallback} for every category (fills.ratio_fallback)"
+    else:
+        ratio = (f"measured per category from table steam_to_market_ratio (mid of ask and bid medians), "
+                 f"{f.ratio_fallback} (fills.ratio_fallback) for categories without a row")
     items = [
-        f"Steam wallet to market.csgo price ratio: {ratio}, {f.ratio_fallback} (fills.ratio_fallback)",
+        f"Steam wallet to market.csgo price ratio: {ratio}",
         f"Spread penalty: {f.spread_penalty:.2%} per fill; participation cap: {f.participation_cap:.0%} of daily volume",
         (f"Costs: seller fee {c.seller_fee:.2%}, buyer fee {c.buyer_fee:.2%}, cash-out withdraw fee "
          f"{c.withdraw_fee_cash:.2%}, Steam-wallet withdraw fee {c.withdraw_fee_steam:.2%}, "
