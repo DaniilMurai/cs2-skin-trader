@@ -1,6 +1,7 @@
 import os
 import subprocess
 import sys
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import ClassVar
@@ -239,10 +240,13 @@ def test_report_renders_the_forward_column_and_keeps_the_hash(tmp_path):
 def test_daily_run_ids_do_not_change(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     bars = synthetic_bars(7, 60)
-    res = run(make_spec("toy", {"lookback": 3}, 100.0, DAY0, DAY0 + timedelta(40), load_settings()),
-              FakeStore(bars), load_settings())
-    # pinned on main before the hourly path was added to the engine
+    spec = make_spec("toy", {"lookback": 3}, 100.0, DAY0, DAY0 + timedelta(40), load_settings())
+    res = run(spec, FakeStore(bars), load_settings())
+    # re-pinned with T-55 (price step, smallest price, minimum fee): new CostModel fields change every run_id
     assert (res.run_id, res.trades.height, round(res.equity["equity_cash"][-1], 6)) == PINNED
+    # With the three T-55 rules switched off the engine still gives the number pinned before them
+    plain = replace(spec, costs=(replace(spec.costs[0], price_step=0.0, min_price=0.0, min_fee=0.0),))
+    assert round(run(plain, FakeStore(bars), load_settings()).equity["equity_cash"][-1], 6) == 63.182566
 
 
 def test_summary_row_has_every_column(tmp_path):
@@ -251,4 +255,4 @@ def test_summary_row_has_every_column(tmp_path):
     assert set(row) <= set(ROW_SCHEMA) and row["net_return_cash"] == pytest.approx(-0.05)
 
 
-PINNED = ("83476ef1a63a68f2", 19, 63.182566)
+PINNED = ("6948fb2a80a57b97", 19, 63.1617)

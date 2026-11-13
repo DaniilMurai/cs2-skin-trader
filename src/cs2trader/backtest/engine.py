@@ -4,10 +4,12 @@ import math
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, timedelta
+from numbers import Integral
 from typing import Any
 
 import polars as pl
 
+from cs2trader.backtest.costs import round_price, sale_proceeds, tradable, unit_fee
 from cs2trader.backtest.view import MarketData
 from cs2trader.config import Settings, load_settings
 from cs2trader.errors import Cs2Error, InvariantViolation
@@ -81,6 +83,9 @@ def apply_fills(orders: Sequence[Order], bar: pl.DataFrame, book: Book,
     for o in sorted(orders, key=lambda o: o.side != "sell"):
         if o.qty <= 0:
             raise InvariantViolation(f"order quantity must be positive: {o}")
+        # A float quantity would pass every min() below and buy part of an item.
+        if not isinstance(o.qty, Integral):
+            raise InvariantViolation(f"order quantity must be a whole number of items: {o}")
         r = rows.get(o.market_hash_name)
         if r is None:
             out.append(Fill(t, o.market_hash_name, o.side, o.qty, 0, 0.0, 0.0, "no_data"))
@@ -96,12 +101,19 @@ def apply_fills(orders: Sequence[Order], bar: pl.DataFrame, book: Book,
         else:
             price = r["price"] * _ratio(r, fills) * (1 + sign * fills.spread_penalty)
             key, cap = o.market_hash_name, _cap(r["volume"], fills.participation_cap)
+        price = round_price(price, cost, o.side)
+        fee_rate = cost.buyer_fee if o.side == "buy" else cost.seller_fee
+        per_unit_fee = unit_fee(price, fee_rate, cost)
+        # Also refuses a sale whose fee eats the whole price: nobody lists an item to receive nothing.
+        if not tradable(price, cost) or (o.side == "sell" and per_unit_fee >= price):
+            out.append(Fill(t, o.market_hash_name, o.side, o.qty, 0, price, 0.0, "min_price"))
+            continue
         cap = max(cap - traded.get(key, 0), 0)
         if o.limit is not None and sign * (price - o.limit) > 0:
             out.append(Fill(t, o.market_hash_name, o.side, o.qty, 0, price, 0.0, "limit"))
             continue
         if o.side == "buy":
-            unit = price * (1 + cost.buyer_fee)
+            unit = price + per_unit_fee
             affordable = math.floor(book.balance / unit + 1e-9)
             qty = min(o.qty, cap, affordable)
             reason = "ok" if qty == o.qty else ("volume_cap" if qty == cap else "no_cash")
@@ -112,7 +124,7 @@ def apply_fills(orders: Sequence[Order], bar: pl.DataFrame, book: Book,
                 book.balance = max(book.balance - qty * unit, 0.0)
                 book.lots.append(Lot(o.market_hash_name, qty, unit, t,
                                      t + timedelta(days=cost.lock_days)))
-            fee = qty * price * cost.buyer_fee
+            fee = qty * per_unit_fee
         else:
             held = sum(l.qty for l in book.lots if l.market_hash_name == o.market_hash_name)
             free = book.sellable(o.market_hash_name, t)
@@ -125,7 +137,7 @@ def apply_fills(orders: Sequence[Order], bar: pl.DataFrame, book: Book,
                 reason = "locked"
             else:
                 reason = "volume_cap"
-            fee = qty * price * cost.seller_fee
+            fee = qty * per_unit_fee
             book.balance += qty * price - fee
             left = qty
             for lot in sorted(book.lots, key=lambda l: l.bought):
@@ -151,7 +163,7 @@ def _mark(row: Mapping[str, Any], fills: FillModel, quotes: bool) -> float:
 
 def _equity(t: date, book: Book, last: dict[str, Mapping[str, Any]], cost: CostModel,
             fills: FillModel, quotes: bool = False) -> EquityPoint:
-    held = sum(l.qty * _mark(last[l.market_hash_name], fills, quotes) * (1 - cost.seller_fee)
+    held = sum(l.qty * sale_proceeds(_mark(last[l.market_hash_name], fills, quotes), cost)
                for l in book.lots)
     gross = book.balance + held
     return EquityPoint(t, book.balance, held, gross * (1 - cost.withdraw_fee_cash),
