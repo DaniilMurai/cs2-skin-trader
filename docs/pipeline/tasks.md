@@ -509,7 +509,7 @@ request and never keeps the file open; anything that writes runs as a subprocess
       DoD: after two hours `cs2 collect status` counts `cf` snapshots and `/status` shows `used_bytes` falling after an import
       Executor: author (secrets), main loop (check)
 
-- [ ] T-47 — Wallet arbitrage paper test (also: `cmd_backtest` passes `store=` to `make_spec`, T-34 follow-up): from the hourly snapshots, log every hour the (Steam/1.15)/ask edge per item with the Steam volume cap, and report the realistic daily profit on $100 and $1,000 in wallet units *(needs ≥ 14 days of snapshots, ~2026-11-24)*
+- [ ] T-47 — Wallet arbitrage paper test (also: `cmd_backtest` passes `store=` to `make_spec`, T-34 follow-up): from the hourly snapshots, log every hour the (Steam/1.15)/ask edge per item with the Steam volume cap, and report the realistic daily profit on $100 and $1,000 in wallet units *(code and synthetic tests done 2026-11-13: `cs2 arbitrage`, assumptions in `reports/T-47.md`; the real run needs ≥ 14 days of snapshots, ~2026-11-24, and `cs2 backfill steam --refresh` first; a re-run ~8 days later resolves all buy days)*
 - [x] T-51 — Add Skinport `min_price`/`quantity` to the hourly collector (public `/v1/items`, USD, `tradable=true`, `Accept-Encoding: br`, 1 request per run) and store it next to market.csgo; DoD: 24 hourly snapshots in a day, join to asks by name *(S-12; extends T-47 to a cash-to-cash direction)* *(code and tests done 2026-11-12, live run ok; launchd job switched to `--kinds asks,bids,skinport` and merged to main 2026-11-12; first hourly file landed; Mac only, the Cloudflare Worker still fetches market.csgo only)*
 - [x] T-52 — ~~Buy aggregator history~~ *(dropped 2026-11-12: the project spends no money, free data only)*
       Executor: main loop
@@ -535,7 +535,7 @@ request and never keeps the file open; anything that writes runs as a subprocess
       Executor: main loop
       Depends on: T-41
 
-- [ ] T-56 — UI input validation and small defects (audit M4, m1…m5)
+- [x] T-56 — UI input validation and small defects (audit M4, m1…m5) *(2026-11-13: 44 UI tests; busy Run form and focus checked in the browser; not fixed: m6, m7, comments in `cs2.toml` dropped on save)*
       Files: src/cs2trader/ui/settings_api.py, src/cs2trader/ui/server.py, src/cs2trader/ui/static/pages.js,
              tests/test_ui.py
       Do: reject non-finite numbers and non-object `changes`; skip the write when nothing changed; validate
@@ -545,3 +545,11 @@ request and never keeps the file open; anything that writes runs as a subprocess
            an unchanged save leaving `.bak` alone, `Content-Length: -1` and `?days=abc` → 400
       Executor: subagent
       Depends on: T-55
+
+- [ ] T-57 — Make `test_parallel_starts_take_one_slot` deterministic (failed 1 run in 3 under load: the fast `cash` job frees the slot before a late thread posts)
+      Files: tests/test_ui.py
+      DoD: the test passes 20 times in a row under `nice -n 19`
+      Executor: subagent
+      Depends on: T-55
+
+- [ ] T-58 — Cash-to-cash edge (market.csgo ↔ Skinport / Waxpeer) as a second `cs2 arbitrage` mode with its own sale model (sell at the then-lowest listing minus fee) *(proposed by T-47; after T-47's real run)*
