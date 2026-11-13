@@ -1,5 +1,6 @@
 """Settings editor: which keys the UI may change, validation, and the cs2.toml writer."""
 import json
+import math
 import os
 import tempfile
 import tomllib
@@ -72,6 +73,8 @@ def describe(settings: Settings) -> dict:
 
 
 def validate(settings: Settings, changes: dict[str, Any]) -> tuple[Settings, list[str]]:
+    if not isinstance(changes, dict):
+        return settings, ["changes: must be an object of key: value"]
     errors: list[str] = []
     new = settings
     for key, value in changes.items():
@@ -85,8 +88,11 @@ def validate(settings: Settings, changes: dict[str, Any]) -> tuple[Settings, lis
             errors.append(str(e))
             continue
         current = _get(new, key)
-        if key == "capitals":
-            if not current or any(c <= 0 for c in current):
+        # NaN fails every comparison and inf passes "> 0", so neither may reach cs2.toml.
+        if isinstance(current, float) and not math.isfinite(current):
+            errors.append(f"{key}: must be a finite number")
+        elif key == "capitals":
+            if not current or any(not math.isfinite(c) or c <= 0 for c in current):
                 errors.append("capitals: a non-empty list of positive numbers")
         elif lo is not None and isinstance(current, int | float) and not lo <= current <= hi:
             errors.append(f"{key}: must be between {lo} and {hi}")
@@ -128,6 +134,9 @@ def save(path: Path, settings: Settings, changes: dict[str, Any]) -> tuple[bool,
     new, errors = validate(settings, changes)
     if errors:
         return False, errors, settings
+    if new == settings:
+        # Rewriting would replace .bak with the current file and lose the real previous version.
+        return True, [], settings
     current = tomllib.loads(path.read_text()) if path.exists() else {}
     for key, value in changes.items():
         value = _get(new, key)
