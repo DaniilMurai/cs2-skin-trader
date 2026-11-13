@@ -6,14 +6,18 @@ Mode: orchestrated (since 2026-11-13; orchestrator branch `claude/pipeline-task-
 
 Orchestrator run 2026-11-13 (rules from the author: spend no money, keep the Mac responsive → at most 2 children,
 tests under `nice -n 19`, no full report runs; child reports in `docs/pipeline/reports/`). All children finished, none running.
-- merged, each DoD re-run by the orchestrator (315 tests on the merged branch): T-17 code, T-34, T-47 code, T-32 code,
-  T-42 UI re-audit (report), T-63, T-64, T-65. Not pushed; `main` not touched.
+- merged, each DoD re-run by the orchestrator (346 tests): T-17 code, T-34, T-47 code, T-32 code, T-42 (closed by the author),
+  T-63, T-64, T-65 (UI audit fixes), T-55 (small-budget cost model), T-56 (liquidity filter and position cap).
+  `main` has everything up to a350a3b; T-55 and T-56 are on the orchestrator branch only. Nothing pushed.
+- operations done: T-46 confirmed; T-54 Worker redeployed with asks, bids, waxpeer (Skinport bans Cloudflare, Mac-only);
+  T-68 `cs2 collect pull` ran for the first time (sales 2026-11-09…13) and the Mac launchd job now also polls sales hourly
 - code-only, real runs wait for data: T-17 `cs2 ratio` and T-47 `cs2 arbitrage` (≥ 14 days, ~2026-11-23/24),
-  T-32 `cs2 forward` (≥ 28 days, ~2026-12-07, T-67 first). 5 days of snapshots on 2026-11-13.
-- needs the author: T-42 (look at the UI), T-46 (Cloudflare token in `.env`), T-54 (`npx wrangler deploy`), T-68 (sales data),
-  T-08 (GitHub runs the hourly cron only every ~6–8 h: 12 scheduled runs since 2026-11-10, all green)
-- contracts.md not yet updated with the children's proposals (reports T-17, T-34, T-47, T-32, T-63): do it at stage 9
-- next startable without the author: T-66 after T-47's real run; nothing else until the data gates open
+  T-32 `cs2 forward` (≥ 28 days, ~2026-12-07, T-67 first)
+- T-55 changed every run_id and the next report's results hash (minimum fee, price rounding); `min_fee = 0.01` is an assumption
+- open for the author: which of T-57…T-60 to run (the orchestrator advised against more daily-bar variants on the reused holdout);
+  T-08 (GitHub cron fires every ~6–8 h); T-59 and T-66 overlap, T-62 and T-67 overlap
+- contracts.md not yet updated with the children's proposals (reports T-17, T-34, T-47, T-32, T-63, T-55-costs, T-56-liquidity)
+- next startable without the author: T-69 (UI labels), T-58 cheap-item flipping (the least holdout-dependent of group J)
 
 Spike S-10 written 2026-11-11 (docs/pipeline/spikes/10-cloudflare-collector/, waits for the author to deploy it): can a Cloudflare Worker cron + R2 replace the GitHub collector (T-08)?
 Plan amended 2026-11-11: step 7 (local UI), AC-15…18, tasks T-35…T-42 (author's request); next: T-35 (re-run the full report), then the UI tasks in order.

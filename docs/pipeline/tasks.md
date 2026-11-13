@@ -532,7 +532,7 @@ T-59 waits for ≥ 14 days of snapshots (~2026-11-24), T-62 for ≥ 28 days (~20
       Executor: main loop
       Depends on: —
 
-- [ ] T-56 — Liquidity filter and position cap: price band, volume floor, 5% of median daily volume cap
+- [x] T-56 — *(2026-11-13: `universe.max_price_usd` and `fills.position_cap`, both off by default so run_ids hold; an over-cap buy is cut with reason `position_cap`; 346 tests; file is `src/cs2trader/market/universe.py`; T-57/T-58 should run with `fills.position_cap = 0.05` and a volume floor ≥ 20, since 5% of the median needs ≥ 20 sales a day to hold one unit; report `reports/T-56-liquidity.md`)* Liquidity filter and position cap: price band, volume floor, 5% of median daily volume cap
       Files: src/cs2trader/universe.py, tests/test_liquidity.py
       DoD: tests green; unit test shows an over-cap order is cut, not filled
       Executor: main loop
@@ -607,3 +607,8 @@ T-59 waits for ≥ 14 days of snapshots (~2026-11-24), T-62 for ≥ 28 days (~20
       Depends on: T-32
 
 - [ ] T-68 — *(2026-11-13: the sales were in `cs2-skin-data` all along; `cs2 collect pull` ran for the first time, 52 files added, `sales` now covers 2026-11-09…13, 2.9 M deduplicated rows, 17,511 items. Coverage: GHA polls 4,800 names every 4–9 h, so ~42 fast items (~31% of sales volume) lose sales between polls and ~9,350 listed items were never polled. `sales` added to the Mac launchd job 2026-11-13 (author's go), run after the price snapshots. Open: define forward volume for the fastest items; `sales_due` puts overdue items before never-polled ones)* Sales in the local data: only one day (2026-11-09, 120 items) is present, so hourly `volume` is ~0. Check whether the GitHub collector's sales are in `cs2-skin-data` (`cs2 collect pull`), else add `sales` back to a collector or drop "observed sales as volume" from the contract *(from T-32; author decides)*
+
+- [ ] T-69 — UI follow-ups of T-55/T-56: labels for fill reasons `min_price` and `position_cap` in `pages.js`; the settings `costs.price_step`, `costs.min_price`, `costs.min_fee`, `universe.max_price_usd`, `fills.position_cap` in the editable list
+      DoD: `uv run pytest tests/test_ui.py` green with a test per new setting; both reasons show a plain-language label
+      Executor: subagent
+      Depends on: T-56
