@@ -526,7 +526,7 @@ request and never keeps the file open; anything that writes runs as a subprocess
 
 T-59 waits for ≥ 14 days of snapshots (~2026-11-24), T-62 for ≥ 28 days (~2026-12-07). Holdout rules: AC-21.
 
-- [ ] T-55 — Small-budget cost model: fees with minimums, price rounding, smallest tradable price, whole-item lots, capital $50
+- [x] T-55 — *(2026-11-13: `price_step` 0.001, `min_price` 0.005, `min_fee` 0.01 (an assumption, binds below $0.20), worst-case rounding; 328 tests; every run_id and the next report's results hash change; adding capital $50 to the report is left to T-61; report `reports/T-55-costs.md`)* Small-budget cost model: fees with minimums, price rounding, smallest tradable price, whole-item lots, capital $50
       Files: src/cs2trader/backtest/costs.py, tests/test_costs_small.py
       DoD: `uv run pytest tests/test_costs_small.py` green; a $50 run never buys a fraction of an item
       Executor: main loop
