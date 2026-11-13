@@ -387,7 +387,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: main loop
       Depends on: T-14, T-31
 
-- [ ] T-34 — Measured Steam→market.csgo ratio in backtests
+- [x] T-34 — Measured Steam→market.csgo ratio in backtests *(2026-11-13: `make_spec(..., store=)` reads `steam_to_market_ratio`, ratio = mid of the ask and bid medians; default `fixed` unchanged; `cs2 backtest` does not pass the store yet → done inside T-47)*
       Files: src/cs2trader/evaluate.py, src/cs2trader/market/ratio.py
       Do: when `fills.ratio_source = "measured"`, `make_spec` fills `FillModel.ratio` per category
           from `steam_to_market_ratio` (T-17); today only `ratio_fallback` is passed
@@ -509,7 +509,7 @@ request and never keeps the file open; anything that writes runs as a subprocess
       DoD: after two hours `cs2 collect status` counts `cf` snapshots and `/status` shows `used_bytes` falling after an import
       Executor: author (secrets), main loop (check)
 
-- [ ] T-47 — Wallet arbitrage paper test: from the hourly snapshots, log every hour the (Steam/1.15)/ask edge per item with the Steam volume cap, and report the realistic daily profit on $100 and $1,000 in wallet units *(needs ≥ 14 days of snapshots, ~2026-11-24)*
+- [ ] T-47 — Wallet arbitrage paper test (also: `cmd_backtest` passes `store=` to `make_spec`, T-34 follow-up): from the hourly snapshots, log every hour the (Steam/1.15)/ask edge per item with the Steam volume cap, and report the realistic daily profit on $100 and $1,000 in wallet units *(needs ≥ 14 days of snapshots, ~2026-11-24)*
 - [x] T-51 — Add Skinport `min_price`/`quantity` to the hourly collector (public `/v1/items`, USD, `tradable=true`, `Accept-Encoding: br`, 1 request per run) and store it next to market.csgo; DoD: 24 hourly snapshots in a day, join to asks by name *(S-12; extends T-47 to a cash-to-cash direction)* *(code and tests done 2026-11-12, live run ok; launchd job switched to `--kinds asks,bids,skinport` and merged to main 2026-11-12; first hourly file landed; Mac only, the Cloudflare Worker still fetches market.csgo only)*
 - [x] T-52 — ~~Buy aggregator history~~ *(dropped 2026-11-12: the project spends no money, free data only)*
       Executor: main loop
@@ -524,7 +524,7 @@ request and never keeps the file open; anything that writes runs as a subprocess
 
 ## J. UI audit fixes (added 2026-11-13 from `reports/T-42-ui-audit.md`)
 
-- [ ] T-55 — UI job slot, priority and secrets filter (audit M1, M2, M3)
+- [x] T-55 — UI job slot, priority and secrets filter (audit M1, M2, M3) *(2026-11-13: 36 UI tests, Stop button checked in the browser on a stand-in job; not checked: stopping a real backtest mid-write)*
       Files: src/cs2trader/ui/jobs.py, src/cs2trader/ui/security.py, src/cs2trader/ui/server.py,
              src/cs2trader/ui/static/*, tests/test_ui.py
       Do: take the job slot and spawn under one lock; start jobs at `nice 19`; `POST /api/jobs/stop` (token) and a
