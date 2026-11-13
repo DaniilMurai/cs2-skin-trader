@@ -2,6 +2,7 @@ import polars as pl
 
 from cs2trader.config import RatioSettings
 from cs2trader.errors import DataCheckFailed
+from cs2trader.models import Category
 from cs2trader.store import Store
 
 SIDES = ("ask", "bid")
@@ -90,3 +91,15 @@ def format_ratio(ratio: pl.DataFrame, spread: pl.DataFrame) -> str:
         note = "  fallback: all-items number" if r["fallback"] else ""
         lines.append(f"{r['category']:<18}{r['median']:>8.1%}{r['n_items']:>7} items{note}")
     return "\n".join(lines)
+
+
+def load_fill_ratios(store: Store) -> dict[Category, float]:
+    """Per-category fill ratio from the stored table. The engine applies one ratio to both
+    sides and adds the spread penalty on top, so the ask and bid medians are averaged into a
+    mid; taking the ask for sells would count the spread twice."""
+    rows = store.db.execute(
+        "SELECT category, avg(median) FROM steam_to_market_ratio GROUP BY category").fetchall()
+    if not rows:
+        raise DataCheckFailed("fills.ratio_source = \"measured\" but steam_to_market_ratio is empty; "
+                              "run `cs2 ratio` first")
+    return {Category(c): m for c, m in rows}
