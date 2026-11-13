@@ -28,6 +28,8 @@ decline. Nothing in the holdout is used to choose rules or parameters.
    localhost to see the verdict, one run's equity curve and trades, the market index with
    regimes, and the collector's health, and to edit settings and start backtests. Done =
    AC-15, AC-16, AC-17, AC-18.
+8. **Small-budget strategies** (added 2026-11-13) — cost model with minimum fees, liquidity filter, filtered momentum,
+   cheap-item flipping, cross-platform arbitrage, event plays, tested at $50 and $100. Done = AC-19, AC-20, AC-21.
 
 ## Acceptance criteria
 
@@ -176,6 +178,27 @@ AC-18: Given — the UI process.
        order on Steam or market.csgo; secret values never appear in any response; every
        state-changing request must carry a token created at start-up (a page on another site
        cannot trigger a run or a settings write); a test checks each of these.
+
+AC-19: Given — the report with capitals $50, $100 and $1,000.
+       When — the verdict is computed.
+       Then — AC-12 applies unchanged at each capital, and a strategy is marked **holds up** at $50 or
+       $100 only if it also: (a) is net of every fee, minimum fee and price rounding (T-55); (b) closed
+       ≥ 30 trades on the holdout; (c) kept max drawdown ≤ 40% of capital; (d) never held a position
+       larger than 5% of the item's median daily volume; (e) the deflation count includes every variant
+       tried in T-55…T-60.
+
+AC-20: Given — ≥ 28 days of forward data (AC-14).
+       When — a strategy marked "holds up" on the holdout is run on it as a paper test.
+       Then — it counts as **confirmed** only if its forward net return is > cash. Backtest-only "holds
+       up" is reported as unconfirmed. (The holdout was already seen in T-33/T-50, so it alone is weak
+       evidence.)
+
+AC-21: Given — the holdout is reused by the new strategies.
+       When — each new strategy family is tested.
+       Then — it is run on the holdout once, parameters are chosen on walk-forward only, and the run
+       is logged in decisions.md before the result is read.
+
+Added 2026-11-13 (author's request: strategies that work on a small budget; see tasks group J, steps 8).
 
 ## Non-goals
 - Real-money trading, placing or cancelling orders on market.csgo or Steam.

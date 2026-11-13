@@ -1,6 +1,6 @@
 # Tasks
 
-Updated: 2026-11-11 (group H, the UI, added). Order in the file = order of execution. The collector goes first: every
+Updated: 2026-11-13 (group J, small-budget strategies, added). Order in the file = order of execution. The collector goes first: every
 day it isn't running is a day of market.csgo data we can never get back (AC-6 needs ≥ 14 days,
 AC-14 needs ≥ 28). Shapes, names and exit codes are in `contracts.md`; this file doesn't repeat
 them. Already built by the stage-5 slice: `errors.py`, `models.py` (part), `require_secret`,
@@ -521,3 +521,50 @@ request and never keeps the file open; anything that writes runs as a subprocess
       Executor: main loop
 - [x] T-53 — Collect Waxpeer prices hourly (keyless `/v1/prices`, `min` in thousandths of a dollar, parquet in `data/collector/waxpeer/`, ~0.36 MB/hour) *(done 2026-11-12: 272 tests pass, launchd job runs `--kinds asks,bids,skinport,waxpeer`, first file landed; Mac only; Waxpeer's terms on automation not confirmed)*
 - [ ] T-54 — Deploy the Worker with Waxpeer and Skinport (`cd ops/cloudflare && npx wrangler deploy`; three crons :07 :09 :11, strict 8 GB guard) and confirm the three crons store 4 raw files per hour, then read CPU per invocation with `npx wrangler tail` (Skinport alone must stay near 10 ms, else drop it from the Worker) and the Mac imports them *(code, Node tests (6) and Python import tests done 2026-11-12; local workerd run fetched all 4 feeds incl. 15.5 MB Skinport; deploy was blocked by the permission classifier, the user runs it)*
+
+## J. Small-budget strategies (added 2026-11-13, AC-19…AC-21)
+
+T-59 waits for ≥ 14 days of snapshots (~2026-11-24), T-62 for ≥ 28 days (~2026-12-07). Holdout rules: AC-21.
+
+- [ ] T-55 — Small-budget cost model: fees with minimums, price rounding, smallest tradable price, whole-item lots, capital $50
+      Files: src/cs2trader/backtest/costs.py, tests/test_costs_small.py
+      DoD: `uv run pytest tests/test_costs_small.py` green; a $50 run never buys a fraction of an item
+      Executor: main loop
+      Depends on: —
+
+- [ ] T-56 — Liquidity filter and position cap: price band, volume floor, 5% of median daily volume cap
+      Files: src/cs2trader/universe.py, tests/test_liquidity.py
+      DoD: tests green; unit test shows an over-cap order is cut, not filled
+      Executor: main loop
+      Depends on: T-55
+
+- [ ] T-57 — Filtered momentum: xs_momentum on the liquid band with a drawdown stop (fix the 99.6% drawdown)
+      DoD: walk-forward run at $50 and $100 logged; the drawdown is reported next to the return
+      Executor: main loop
+      Depends on: T-56
+
+- [ ] T-58 — Cheap-item flipping: buy under $5 where the net margin after fees exceeds the spread, on hourly snapshots and Steam history
+      DoD: strategy registered, tests green, walk-forward result logged
+      Executor: main loop
+      Depends on: T-56
+
+- [ ] T-59 — Cross-platform arbitrage paper test: market.csgo, Waxpeer, Skinport, net of fees, small lots
+      Extends T-47 (wallet arbitrage). Needs ≥ 14 days of snapshots (~2026-11-24); T-54 helps.
+      DoD: daily edge and realistic profit on $50 and $100 written to reports/
+      Executor: main loop
+      Depends on: T-47, T-54, T-55
+
+- [ ] T-60 — Event and release plays on small positions (spike 09 calendar)
+      DoD: strategy registered, tests green, walk-forward result logged
+      Executor: main loop
+      Depends on: T-55, S-09
+
+- [ ] T-61 — Verdict extension (AC-19, AC-21): $50 capital, trades/drawdown/volume rules, deflation count
+      DoD: `uv run pytest` green; a synthetic strategy breaking each rule gets the right "first rule broken"
+      Executor: main loop
+      Depends on: T-55, T-56
+
+- [ ] T-62 — Full report re-run with all new strategies, then forward paper test (AC-20)
+      DoD: report hash identical on two runs; each strategy marked holds up / confirmed / fails; decisions.md entry
+      Executor: main loop
+      Depends on: T-57…T-61, ≥ 28 days of forward data (~2026-12-07)
