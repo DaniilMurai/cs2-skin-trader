@@ -192,7 +192,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: main loop
       Depends on: T-14, T-15
 
-- [ ] T-17 — Steam→market.csgo ratio + spread calibration, `cs2 ratio` *(time-gated: ≥ 14 days)*
+- [ ] T-17 — Steam→market.csgo ratio + spread calibration, `cs2 ratio` *(code and synthetic tests done 2026-11-13, 279 tests, result stored in table `steam_to_market_ratio`; the real-data run waits for ≥ 14 days of snapshots, ~2026-11-23)*
       Files: src/cs2trader/market/ratio.py, src/cs2trader/cli.py, tests/test_ratio.py
       Do: per category and side (ask, bid): median, q25, q75, n_items of market.csgo price /
           Steam daily price on the same day; < 20 items → all-items fallback, flagged; also
@@ -485,7 +485,7 @@ request and never keeps the file open; anything that writes runs as a subprocess
       Executor: main loop
       Depends on: T-40, T-38
 
-- [ ] T-42 — End-to-end check of the UI *(all pages and both forms ran live on a clone of the real data 2026-11-11; waits for the author to look, and for the stage-8 re-audit of `ui/`)*
+- [ ] T-42 — End-to-end check of the UI *(all pages and both forms ran live on a clone of the real data 2026-11-11; re-audit of `ui/` done 2026-11-13 on synthetic data, `docs/pipeline/reports/T-42-ui-audit.md`: AC-15 and AC-18 pass, AC-16 and AC-17 each fail one clause → T-55, T-56; still waits for the author to look)*
       Files: docs/pipeline/brief.md (How to run)
       Do: start `cs2 ui` on the real data clone, open every page in the built-in browser, edit a setting,
           start a backtest, compare its numbers with the CLI; write the commands into "How to run"
@@ -521,3 +521,27 @@ request and never keeps the file open; anything that writes runs as a subprocess
       Executor: main loop
 - [x] T-53 — Collect Waxpeer prices hourly (keyless `/v1/prices`, `min` in thousandths of a dollar, parquet in `data/collector/waxpeer/`, ~0.36 MB/hour) *(done 2026-11-12: 272 tests pass, launchd job runs `--kinds asks,bids,skinport,waxpeer`, first file landed; Mac only; Waxpeer's terms on automation not confirmed)*
 - [ ] T-54 — Deploy the Worker with Waxpeer and Skinport (`cd ops/cloudflare && npx wrangler deploy`; three crons :07 :09 :11, strict 8 GB guard) and confirm the three crons store 4 raw files per hour, then read CPU per invocation with `npx wrangler tail` (Skinport alone must stay near 10 ms, else drop it from the Worker) and the Mac imports them *(code, Node tests (6) and Python import tests done 2026-11-12; local workerd run fetched all 4 feeds incl. 15.5 MB Skinport; deploy was blocked by the permission classifier, the user runs it)*
+
+## J. UI audit fixes (added 2026-11-13 from `reports/T-42-ui-audit.md`)
+
+- [ ] T-55 — UI job slot, priority and secrets filter (audit M1, M2, M3)
+      Files: src/cs2trader/ui/jobs.py, src/cs2trader/ui/security.py, src/cs2trader/ui/server.py,
+             src/cs2trader/ui/static/*, tests/test_ui.py
+      Do: take the job slot and spawn under one lock; start jobs at `nice 19`; `POST /api/jobs/stop` (token) and a
+          Stop button; build the response filter from every secret name in `config.py`
+      DoD: `uv run pytest tests/test_ui.py` green with new tests: 6 parallel POSTs → exactly one 202 and five 409;
+           the child's niceness is 19 and stop ends it with state `stopped`; the secrets test sets all four names
+           and also checks POST and 4xx/5xx bodies
+      Executor: main loop
+      Depends on: T-41
+
+- [ ] T-56 — UI input validation and small defects (audit M4, m1…m5)
+      Files: src/cs2trader/ui/settings_api.py, src/cs2trader/ui/server.py, src/cs2trader/ui/static/pages.js,
+             tests/test_ui.py
+      Do: reject non-finite numbers and non-object `changes`; skip the write when nothing changed; validate
+          `Content-Length` and integer query parameters → 400; no date claim on the Run form while the database
+          is busy; return focus to the Run button; tighten the second-job test to `== 409`
+      DoD: `uv run pytest tests/test_ui.py` green with tests for `inf`, `NaN`, `[1]` → 422 and file unchanged,
+           an unchanged save leaving `.bak` alone, `Content-Length: -1` and `?days=abc` → 400
+      Executor: subagent
+      Depends on: T-55

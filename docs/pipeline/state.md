@@ -6,9 +6,8 @@ Mode: orchestrated (since 2026-11-13; orchestrator branch `claude/pipeline-task-
 
 Orchestrator batch 2026-11-13 (rules from the author: spend no money, keep the Mac responsive → at most 2 children,
 tests under `nice -n 19`, no full report runs; children report in `docs/pipeline/reports/`):
-- running: T-17 code + synthetic tests (session local_6a026516-2a6b-4be3-a618-c3087b96d92d, fast model);
-  T-42 UI re-audit (session local_c07972de-17e3-4557-9d1a-821cf28a4d0d, strong model)
-- queued, one at a time (all edit `cli.py`): T-34, T-47 code, T-32 code
+- merged 2026-11-13: T-17 code + synthetic tests (279 tests), T-42 UI re-audit report (4 major findings → T-55, T-56)
+- next: T-34 (fast model) alongside T-55 (strong model), then T-56, T-47 code, T-32 code, one at a time where files overlap
 - not startable: real-data parts of T-17/T-47 (5 days of snapshots, need 14), T-32 (28); T-46 and T-54 need the author
 - T-08 observation 2026-11-13: GitHub runs the hourly cron only every ~6–8 h (12 scheduled runs since 2026-11-10, all green)
 
