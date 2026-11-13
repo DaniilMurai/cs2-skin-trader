@@ -8,6 +8,15 @@ from pathlib import Path
 
 import polars as pl
 
+from cs2trader.arbitrage import (
+    ArbParams,
+    format_assumptions,
+    format_edges,
+    format_result,
+    hourly_edges,
+    simulate,
+    steam_bars,
+)
 from cs2trader.backfill import backfill, feed_universe, read_names, request_logger
 from cs2trader.backtest.engine import run
 from cs2trader.backtest.runs import save_run
@@ -88,9 +97,12 @@ def cmd_strategies(args: argparse.Namespace) -> None:
 
 def cmd_backtest(args: argparse.Namespace) -> None:
     settings = load_settings()
-    spec = make_spec(args.strategy, parse_params(args.strategy, args.params), args.capital,
-                     date.fromisoformat(args.date_from), date.fromisoformat(args.date_to), settings)
-    result = run(spec, Store(settings.data_dir), settings)
+    params = parse_params(args.strategy, args.params)
+    # The store is opened before the spec: fills.ratio_source = "measured" reads its ratio table
+    store = Store(settings.data_dir)
+    spec = make_spec(args.strategy, params, args.capital, date.fromisoformat(args.date_from),
+                     date.fromisoformat(args.date_to), settings, store=store)
+    result = run(spec, store, settings)
     out = save_run(result, settings.data_dir / "runs")
     eq = result.equity
     print(f"run {result.run_id}  data {result.data_version}  bars {eq.height}")
@@ -140,6 +152,29 @@ def cmd_ratio(args: argparse.Namespace) -> None:
     ratio = steam_to_market_ratio(store, settings.ratio)
     print(format_ratio(ratio, measured_spread(store, settings.ratio)))
     print(f"stored {store.write_ratio(ratio)} rows in steam_to_market_ratio")
+
+
+def cmd_arbitrage(args: argparse.Namespace) -> None:
+    settings = load_settings()
+    try:
+        capitals = [float(c) for c in args.capital.split(",")] if args.capital else settings.capitals
+    except ValueError as e:
+        raise ConfigError(f"--capital must be comma-separated numbers: {e}") from e
+    p = ArbParams(min_days=args.min_days, min_edge=args.min_edge, volume_share=args.volume_share)
+    store = Store(settings.data_dir)
+    first = store.db.execute("SELECT min(CAST(feed_time AS DATE)) FROM asks").fetchall()[0][0]
+    bars = steam_bars(store, first) if first else None
+    edges = hourly_edges(store, p, bars)
+    out = settings.data_dir / "arbitrage"
+    out.mkdir(parents=True, exist_ok=True)
+    edges.write_parquet(out / "edges.parquet", compression="zstd")
+    print(format_assumptions(p))
+    print(format_edges(edges, p))
+    for capital in capitals:
+        result = simulate(edges, bars, capital, p)
+        result.lots.write_parquet(out / f"lots_{capital:g}.parquet", compression="zstd")
+        print(format_result(result, p))
+    print(f"hourly edge log and bought units: {out}")
 
 
 def cmd_ui(args: argparse.Namespace) -> None:
@@ -231,6 +266,14 @@ def main() -> None:
     rg.set_defaults(func=cmd_regimes)
 
     sub.add_parser("ratio", help="Steam to market.csgo price ratio and spread per category").set_defaults(func=cmd_ratio)
+
+    ar = sub.add_parser("arbitrage", help="paper test: buy on market.csgo, sell on Steam after the trade lock")
+    ar.add_argument("--capital", help="comma-separated; default: capitals from cs2.toml")
+    ar.add_argument("--min-days", type=int, default=ArbParams.min_days, help="days of ask snapshots required")
+    ar.add_argument("--min-edge", type=float, default=ArbParams.min_edge)
+    ar.add_argument("--volume-share", type=float, default=ArbParams.volume_share,
+                    help="share of an item's Steam daily volume one may take")
+    ar.set_defaults(func=cmd_arbitrage)
 
     co = sub.add_parser("collect").add_subparsers(required=True)
     cr = co.add_parser("run")
