@@ -20,6 +20,7 @@ from cs2trader.evaluate import (
     metrics,
     walk_forward,
 )
+from cs2trader.forward import CHOICES
 from cs2trader.market.index import market_index
 from cs2trader.market.regimes import label_regimes
 from cs2trader.models import Metrics, RunResult, Verdict
@@ -283,6 +284,29 @@ def _assumptions(store: Store, settings: Settings, end) -> str:
     return "<ul>" + "".join(f"<li>{html.escape(i)}</li>" for i in items) + "</ul>"
 
 
+def _forward_rows(settings: Settings) -> pl.DataFrame | None:
+    path = settings.data_dir / "forward" / "results.parquet"
+    return pl.read_parquet(path) if path.exists() else None
+
+
+def forward_section(rows: pl.DataFrame | None) -> str:
+    """The forward paper test next to the daily backtest of the same strategy, params and dates.
+    Rendered from `cs2 forward`'s summary; it is not part of the results table or its hash."""
+    if rows is None or rows.is_empty():
+        return ""
+    header = ["strategy", "capital", "dates (UTC)", "params", "backtest", "forward", "backtest max DD",
+              "forward max DD", "backtest trades", "forward trades", "forward fees paid"]
+    body = [[r["strategy"], _money(r["capital"]), f"{r['start'][:13]}h .. {r['end'][:13]}h", r["params_json"],
+             _fmt(r["bt_net_return_cash"], "pct"), _fmt(r["net_return_cash"], "pct"),
+             _fmt(r["bt_max_drawdown_cash"], "dd"), _fmt(r["max_drawdown_cash"], "dd"),
+             _fmt(r["bt_n_trades"], "int"), _fmt(r["n_trades"], "int"), _fmt(r["fees_paid"], "usd")]
+            for r in rows.sort("strategy", "capital").iter_rows(named=True)]
+    notes = "".join(f"<li>{html.escape(c)}</li>" for c in CHOICES)
+    return ("<h2>Forward paper test</h2><p>Net return, cash-out unit. backtest = the daily engine on Steam bars, "
+            "forward = hourly on market.csgo snapshots, same strategy, parameters and dates.</p>"
+            + _table(header, body) + f"<ul>{notes}</ul>")
+
+
 def build_report(store: Store, out_dir: Path, settings: Settings | None = None,
                  strategies: list[str] | None = None, jobs: int = 1, progress: bool = False) -> Path:
     settings = settings or load_settings()
@@ -299,6 +323,7 @@ def build_report(store: Store, out_dir: Path, settings: Settings | None = None,
         f"<h2>Verdicts</h2>"
         + _table(["strategy", "capital", "status", "first broken rule", "deflated Sharpe", "n_variants"], vrows)
         + "<h2>Results</h2>" + _results_tables(ev.results, caps)
+        + forward_section(_forward_rows(settings))
         + "<h2>Sensitivity</h2>" + _sensitivity(ev.results, caps, settings)
         + "<h2>Assumptions</h2>" + _assumptions(store, settings, store.last_day())
         + "<h2>Appendix: strategy specs</h2>" + appendix
