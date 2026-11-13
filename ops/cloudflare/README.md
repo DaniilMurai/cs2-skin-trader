@@ -1,19 +1,20 @@
 # Cloudflare buffer for the hourly price feeds
 
-A Worker (three crons: `7 * * * *` market.csgo asks+bids, `9 * * * *` Waxpeer, `11 * * * *` Skinport; one invocation each, because the free plan's 10 ms CPU limit is per invocation) downloads the market.csgo asks and bids feeds, the Waxpeer prices and the Skinport items (tradable only) and stores the raw JSON in the R2
+A Worker (two crons: `7 * * * *` market.csgo asks+bids, `9 * * * *` Waxpeer; one invocation each, because the free plan's 10 ms CPU limit is per invocation) downloads the market.csgo asks and bids feeds and the Waxpeer prices and stores the raw JSON in the R2
 bucket `cs2-collector-spike`. Your Mac imports them with `cs2 collect pull` (hourly via launchd, which runs
 `cs2 collect pull --cf-only` after each collector run) and deletes each file from R2 once its Parquet snapshot
-exists. Sales polling stays on the Mac.
+exists. Sales polling stays on the Mac, and so does Skinport: its Cloudflare zone answers every Worker request
+with HTTP 403 `error code: 1005` (the Workers network is banned; measured 2026-11-12..13).
 
 Why raw and why a buffer: gzip inside the Worker used 77–184 ms CPU against the free plan's 10 ms; raw
-storage uses 7–13 ms (spike S-10, `docs/pipeline/spikes/FINDINGS.md`). Raw files are ~22 MB per run (Skinport is 15.5 MB of it;
-~535 MB/day), so the Mac's import is what keeps the bucket small; with the Mac off the 8 GB guard
-stops new files after about 15 days.
+storage uses 7–13 ms (spike S-10, `docs/pipeline/spikes/FINDINGS.md`). Raw files are ~7 MB per hour
+(~170 MB/day), so the Mac's import is what keeps the bucket small; with the Mac off the 8 GB guard
+stops new files after about 47 days.
 
 **Quota guard:** before each run the Worker sums the size of `raw/` and starts only if `used + room for the files
-the run may add` (5 MB per feed, 20 MB for Skinport) stays within `MAX_BYTES` (8 GB, 80 % of the free 10 GB), so the
+the run may add` (5 MB per feed) stays within `MAX_BYTES` (8 GB, 80 % of the free 10 GB), so the
 bucket never passes 8 GB. Otherwise it writes nothing and logs `stopped: quota…`. Every import deletes what it
-imported, so usage resets; 8 GB is reached only if imports fail for about 15 days in a row.
+imported, so usage resets; 8 GB is reached only if imports fail for about 47 days in a row.
 
 ## Setup (once)
 ```bash

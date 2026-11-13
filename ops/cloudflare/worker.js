@@ -5,18 +5,15 @@ const FEEDS = {
   asks: { url: "https://market.csgo.com/api/v2/prices/USD.json" },
   bids: { url: "https://market.csgo.com/api/v2/prices/orders/USD.json" },
   waxpeer: { url: "https://api.waxpeer.com/v1/prices?game=csgo&minified=1" },
-  // Only the tradable view: the full list differs by 0.3 % of items and would double the 15 MB raw size.
-  // Skinport answers 406 unless `br` is accepted.
-  skinport: { url: "https://api.skinport.com/v1/items?app_id=730&currency=USD&tradable=true",
-              headers: { "Accept-Encoding": "br" } },
+  // No Skinport here: its Cloudflare zone bans the Workers ASN (HTTP 403 "error code: 1005" on every run,
+  // 2026-11-12..13), which no request header can change. The Mac collects Skinport directly.
 };
 const RAW = "raw/";
 const DEFAULT_MAX_BYTES = 8e9; // 80 % of R2's free 10 GB
 // One cron per group: the free plan's 10 ms CPU limit applies per invocation, so feeds in one run add up.
-const CRON_FEEDS = { "7 * * * *": ["asks", "bids"], "9 * * * *": ["waxpeer"], "11 * * * *": ["skinport"] };
-// A run is only started if the files it may add still fit under the limit (the largest feed is Skinport, ~15.5 MB).
-const FEED_MARGIN = { skinport: 20e6 };
-const DEFAULT_MARGIN = 5e6;
+const CRON_FEEDS = { "7 * * * *": ["asks", "bids"], "9 * * * *": ["waxpeer"] };
+// A run is only started if the files it may add still fit under the limit (each feed is 2-2.5 MB).
+const FEED_MARGIN = 5e6;
 
 export async function usageBytes(bucket) {
   let total = 0, cursor;
@@ -55,7 +52,7 @@ export async function collect(env, scheduledMs, now = new Date(), kinds = Object
   const used = await usageBytes(env.BUCKET);
   const entry = { scheduled_at: new Date(scheduledMs).toISOString(), ran_at: now.toISOString(),
                   delay_s: (now.getTime() - scheduledMs) / 1000, used_bytes: used, results: [] };
-  const need = kinds.reduce((n, k) => n + (FEED_MARGIN[k] || DEFAULT_MARGIN), 0);
+  const need = kinds.length * FEED_MARGIN;
   if (used + need > maxBytes) {
     entry.stopped = "quota: raw files use " + used + " bytes, limit " + maxBytes + "; import them with `cs2 collect pull`";
   } else {
@@ -107,7 +104,7 @@ export async function handle(request, env) {
     return json({ deleted: keys.length });
   }
   if (url.pathname === "/run" && request.method === "POST") {
-    // ?feeds=skinport runs just that group, one invocation, like its cron would.
+    // ?feeds=waxpeer runs just that group, one invocation, like its cron would.
     const asked = (url.searchParams.get("feeds") || "").split(",").filter((k) => k in FEEDS);
     return json(await collect(env, Date.now(), new Date(), asked.length ? asked : Object.keys(FEEDS)));
   }

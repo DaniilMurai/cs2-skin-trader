@@ -24,20 +24,20 @@ const withFetch = (status, size, fn) => async () => {
 test("a run stores every feed and a log entry", withFetch(200, 1000, async () => {
   const env = { BUCKET: new FakeBucket() };
   const e = await collect(env, Date.now());
-  assert.equal(e.results.length, 4);
-  assert.equal([...env.BUCKET.m.keys()].filter((k) => k.startsWith("raw/")).length, 4);
+  assert.equal(e.results.length, 3);
+  assert.equal([...env.BUCKET.m.keys()].filter((k) => k.startsWith("raw/")).length, 3);
   assert.equal([...env.BUCKET.m.keys()].filter((k) => k.startsWith("log/")).length, 1);
 }));
 
 test("stops adding files at the quota and says so", withFetch(200, 1000, async () => {
-  const env = { BUCKET: new FakeBucket(), MAX_BYTES: "35006000" };
+  const env = { BUCKET: new FakeBucket(), MAX_BYTES: "15004500" };
   await collect(env, Date.now(), new Date("2026-01-01T00:07:00Z"));
   const second = await collect(env, Date.now(), new Date("2026-01-01T01:07:00Z"));
-  assert.equal(second.results.length, 4);          // 4 feeds need 35 MB of room: 35,004,000 <= 35,006,000
+  assert.equal(second.results.length, 3);          // 3 feeds need 15 MB of room: 15,003,000 <= 15,004,500
   const third = await collect(env, Date.now(), new Date("2026-01-01T02:07:00Z"));
   assert.match(third.stopped, /quota/);
   assert.equal(third.results.length, 0);
-  assert.equal(await usageBytes(env.BUCKET), 8000);
+  assert.equal(await usageBytes(env.BUCKET), 6000);
 }));
 
 test("usage counts every page of the listing", async () => {
@@ -50,7 +50,7 @@ test("a non-200 feed is logged, not stored as data", withFetch(503, 10, async ()
   const env = { BUCKET: new FakeBucket() };
   await collect(env, Date.now());
   assert.equal([...env.BUCKET.m.keys()].filter((k) => k.startsWith("raw/")).length, 0);
-  assert.equal([...env.BUCKET.m.keys()].filter((k) => k.startsWith("errors/")).length, 4);
+  assert.equal([...env.BUCKET.m.keys()].filter((k) => k.startsWith("errors/")).length, 3);
 }));
 
 const req = (path, init = {}, token = "secret") =>
@@ -83,18 +83,18 @@ test("a cron run fetches only its own group of feeds", withFetch(200, 1000, asyn
   const env = { BUCKET: new FakeBucket() };
   const pending = [];
   const ctx = { waitUntil: (p) => pending.push(p) };
-  await worker.scheduled({ cron: "11 * * * *", scheduledTime: Date.now() }, env, ctx);
+  await worker.scheduled({ cron: "9 * * * *", scheduledTime: Date.now() }, env, ctx);
   await worker.scheduled({ cron: "7 * * * *", scheduledTime: Date.now() }, env, ctx);
   await Promise.all(pending);
   const raw = [...env.BUCKET.m.keys()].filter((k) => k.startsWith("raw/")).map((k) => k.split("/")[1]).sort();
-  assert.deepEqual(raw, ["asks", "bids", "skinport"]);
+  assert.deepEqual(raw, ["asks", "bids", "waxpeer"]);
 }));
 
 test("the quota check leaves room for the files a run may add", withFetch(200, 1000, async () => {
-  // 1000 bytes used and a 15 MB skinport file may follow: with a 10 MB limit the run must not start
-  const env = { BUCKET: new FakeBucket(), MAX_BYTES: "10000000" };
+  // 1000 bytes used and a file of up to 5 MB may follow: with a 5 MB limit the run must not start
+  const env = { BUCKET: new FakeBucket(), MAX_BYTES: "5000000" };
   await env.BUCKET.put("raw/asks/day=1/a.json", feedBody(1000));
-  const e = await collect(env, Date.now(), new Date(), ["skinport"]);
+  const e = await collect(env, Date.now(), new Date(), ["waxpeer"]);
   assert.match(e.stopped, /quota/);
   assert.equal(e.results.length, 0);
 }));
