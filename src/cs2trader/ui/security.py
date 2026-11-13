@@ -1,10 +1,12 @@
 import os
 import secrets
+import typing
 from pathlib import Path
 
-from cs2trader.config import _read_dotenv
+from cs2trader.config import SecretName, _read_dotenv
 
-SECRET_NAMES = ("STEAM_LOGIN_SECURE", "MARKETCSGO_API_KEY")
+# Derived, so a secret added to config.py is filtered without anyone remembering this file.
+SECRET_NAMES: tuple[str, ...] = typing.get_args(SecretName)
 TOKEN_HEADER = "X-CS2-Token"
 BIND_HOST = "127.0.0.1"
 

@@ -145,6 +145,9 @@ def make_handler(app: App):
                 if path == "/api/jobs":
                     status, payload = app.jobs.start_backtest(body)
                     return self._json(status, payload)
+                if path == "/api/jobs/stop":
+                    status, payload = app.jobs.stop()
+                    return self._json(status, payload)
             except ConfigError as e:
                 return self._json(422, {"ok": False, "errors": [str(e)]})
             except Exception as e:  # noqa: BLE001 - report it to the client, keep serving
