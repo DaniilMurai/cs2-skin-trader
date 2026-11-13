@@ -192,7 +192,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: main loop
       Depends on: T-14, T-15
 
-- [ ] T-17 — Steam→market.csgo ratio + spread calibration, `cs2 ratio` *(time-gated: ≥ 14 days)*
+- [ ] T-17 — Steam→market.csgo ratio + spread calibration, `cs2 ratio` *(code and synthetic tests done 2026-11-13, 279 tests, result stored in table `steam_to_market_ratio`; the real-data run waits for ≥ 14 days of snapshots, ~2026-11-23)*
       Files: src/cs2trader/market/ratio.py, src/cs2trader/cli.py, tests/test_ratio.py
       Do: per category and side (ask, bid): median, q25, q75, n_items of market.csgo price /
           Steam daily price on the same day; < 20 items → all-items fallback, flagged; also
@@ -387,7 +387,7 @@ Until then they are skipped and the next task in order is taken.
       Executor: main loop
       Depends on: T-14, T-31
 
-- [ ] T-34 — Measured Steam→market.csgo ratio in backtests
+- [x] T-34 — Measured Steam→market.csgo ratio in backtests *(2026-11-13: `make_spec(..., store=)` reads `steam_to_market_ratio`, ratio = mid of the ask and bid medians; default `fixed` unchanged; `cs2 backtest` does not pass the store yet → done inside T-47)*
       Files: src/cs2trader/evaluate.py, src/cs2trader/market/ratio.py
       Do: when `fills.ratio_source = "measured"`, `make_spec` fills `FillModel.ratio` per category
           from `steam_to_market_ratio` (T-17); today only `ratio_fallback` is passed
@@ -398,7 +398,7 @@ Until then they are skipped and the next task in order is taken.
 
 ## G. Forward paper test (Plan step 6, AC-14)
 
-- [ ] T-32 — Hourly bars and `cs2 forward` *(time-gated: ≥ 28 days)*
+- [ ] T-32 — Hourly bars and `cs2 forward` *(code and synthetic tests done 2026-11-13: 12 forward tests, choices in `reports/T-32.md`, engine and view also changed; the real run needs ≥ 28 days of snapshots, ~2026-12-07, and T-67 first)*
       Files: src/cs2trader/store.py, src/cs2trader/forward.py, src/cs2trader/cli.py,
              src/cs2trader/report.py, tests/test_forward.py
       Do: `hourly_bars` from asks/bids/sales (price, observed sales as volume, ask, bid);
@@ -485,7 +485,7 @@ request and never keeps the file open; anything that writes runs as a subprocess
       Executor: main loop
       Depends on: T-40, T-38
 
-- [ ] T-42 — End-to-end check of the UI *(all pages and both forms ran live on a clone of the real data 2026-11-11; waits for the author to look, and for the stage-8 re-audit of `ui/`)*
+- [ ] T-42 — End-to-end check of the UI *(all pages and both forms ran live on a clone of the real data 2026-11-11; re-audit of `ui/` done 2026-11-13 on synthetic data, `docs/pipeline/reports/T-42-ui-audit.md`: AC-15 and AC-18 pass, AC-16 and AC-17 each fail one clause → T-63, T-64; still waits for the author to look)*
       Files: docs/pipeline/brief.md (How to run)
       Do: start `cs2 ui` on the real data clone, open every page in the built-in browser, edit a setting,
           start a backtest, compare its numbers with the CLI; write the commands into "How to run"
@@ -509,7 +509,7 @@ request and never keeps the file open; anything that writes runs as a subprocess
       DoD: after two hours `cs2 collect status` counts `cf` snapshots and `/status` shows `used_bytes` falling after an import
       Executor: author (secrets), main loop (check)
 
-- [ ] T-47 — Wallet arbitrage paper test: from the hourly snapshots, log every hour the (Steam/1.15)/ask edge per item with the Steam volume cap, and report the realistic daily profit on $100 and $1,000 in wallet units *(needs ≥ 14 days of snapshots, ~2026-11-24)*
+- [ ] T-47 — Wallet arbitrage paper test (also: `cmd_backtest` passes `store=` to `make_spec`, T-34 follow-up): from the hourly snapshots, log every hour the (Steam/1.15)/ask edge per item with the Steam volume cap, and report the realistic daily profit on $100 and $1,000 in wallet units *(code and synthetic tests done 2026-11-13: `cs2 arbitrage`, assumptions in `reports/T-47.md`; the real run needs ≥ 14 days of snapshots, ~2026-11-24, and `cs2 backfill steam --refresh` first; a re-run ~8 days later resolves all buy days)*
 - [x] T-51 — Add Skinport `min_price`/`quantity` to the hourly collector (public `/v1/items`, USD, `tradable=true`, `Accept-Encoding: br`, 1 request per run) and store it next to market.csgo; DoD: 24 hourly snapshots in a day, join to asks by name *(S-12; extends T-47 to a cash-to-cash direction)* *(code and tests done 2026-11-12, live run ok; launchd job switched to `--kinds asks,bids,skinport` and merged to main 2026-11-12; first hourly file landed; Mac only, the Cloudflare Worker still fetches market.csgo only)*
 - [x] T-52 — ~~Buy aggregator history~~ *(dropped 2026-11-12: the project spends no money, free data only)*
       Executor: main loop
@@ -568,3 +568,42 @@ T-59 waits for ≥ 14 days of snapshots (~2026-11-24), T-62 for ≥ 28 days (~20
       DoD: report hash identical on two runs; each strategy marked holds up / confirmed / fails; decisions.md entry
       Executor: main loop
       Depends on: T-57…T-61, ≥ 28 days of forward data (~2026-12-07)
+
+## K. UI audit fixes and follow-ups (added 2026-11-13 from `reports/T-42-ui-audit.md`)
+
+- [x] T-63 — UI job slot, priority and secrets filter (audit M1, M2, M3) *(2026-11-13: 36 UI tests, Stop button checked in the browser on a stand-in job; not checked: stopping a real backtest mid-write)*
+      Files: src/cs2trader/ui/jobs.py, src/cs2trader/ui/security.py, src/cs2trader/ui/server.py,
+             src/cs2trader/ui/static/*, tests/test_ui.py
+      Do: take the job slot and spawn under one lock; start jobs at `nice 19`; `POST /api/jobs/stop` (token) and a
+          Stop button; build the response filter from every secret name in `config.py`
+      DoD: `uv run pytest tests/test_ui.py` green with new tests: 6 parallel POSTs → exactly one 202 and five 409;
+           the child's niceness is 19 and stop ends it with state `stopped`; the secrets test sets all four names
+           and also checks POST and 4xx/5xx bodies
+      Executor: main loop
+      Depends on: T-41
+
+- [x] T-64 — UI input validation and small defects (audit M4, m1…m5) *(2026-11-13: 44 UI tests; busy Run form and focus checked in the browser; not fixed: m6, m7, comments in `cs2.toml` dropped on save)*
+      Files: src/cs2trader/ui/settings_api.py, src/cs2trader/ui/server.py, src/cs2trader/ui/static/pages.js,
+             tests/test_ui.py
+      Do: reject non-finite numbers and non-object `changes`; skip the write when nothing changed; validate
+          `Content-Length` and integer query parameters → 400; no date claim on the Run form while the database
+          is busy; return focus to the Run button; tighten the second-job test to `== 409`
+      DoD: `uv run pytest tests/test_ui.py` green with tests for `inf`, `NaN`, `[1]` → 422 and file unchanged,
+           an unchanged save leaving `.bak` alone, `Content-Length: -1` and `?days=abc` → 400
+      Executor: subagent
+      Depends on: T-63
+
+- [x] T-65 — *(2026-11-13: the cause was the UI server's listen backlog of 5 dropping one of six connects; `request_queue_size = 32`; 20/20 passes)* Make `test_parallel_starts_take_one_slot` deterministic (failed 1 run in 3 under load: the fast `cash` job frees the slot before a late thread posts)
+      Files: tests/test_ui.py
+      DoD: the test passes 20 times in a row under `nice -n 19`
+      Executor: subagent
+      Depends on: T-63
+
+- [ ] T-66 — Cash-to-cash edge (market.csgo ↔ Skinport / Waxpeer) as a second `cs2 arbitrage` mode with its own sale model (sell at the then-lowest listing minus fee) *(proposed by T-47; after T-47's real run)*
+
+- [ ] T-67 — Before the real `cs2 forward` run: restrict hourly bars to the Steam universe plus held items (each decision now concatenates up to 45 days × ~27,000 items ≈ 29 M rows), then `cs2 backfill steam --refresh` *(from T-32)*
+      DoD: `cs2 forward` on ≥ 28 days of real snapshots finishes under `nice 19` without the Mac lagging; results equal the unrestricted run on a synthetic fixture
+      Executor: main loop
+      Depends on: T-32
+
+- [ ] T-68 — Sales in the local data: only one day (2026-11-09, 120 items) is present, so hourly `volume` is ~0. Check whether the GitHub collector's sales are in `cs2-skin-data` (`cs2 collect pull`), else add `sales` back to a collector or drop "observed sales as volume" from the contract *(from T-32; author decides)*

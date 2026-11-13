@@ -20,6 +20,7 @@ from cs2trader.evaluate import (
     metrics,
     walk_forward,
 )
+from cs2trader.forward import CHOICES
 from cs2trader.market.index import market_index
 from cs2trader.market.regimes import label_regimes
 from cs2trader.models import Metrics, RunResult, Verdict
@@ -121,11 +122,11 @@ def evaluate_all(store: Store, settings: Settings, strategies: list[str] | None 
     def one(runner, capital: float, name: str):
         entry = REGISTRY[name]
         wf = walk_forward(entry, capital, store, wf_s, settings, runner=runner)
-        ho = runner.submit_run(holdout_spec(entry, wf.chosen_params, capital, wf_s, end, False, settings))
-        ho_s = runner.submit_run(holdout_spec(entry, wf.chosen_params, capital, wf_s, end, True, settings))
+        ho = runner.submit_run(holdout_spec(entry, wf.chosen_params, capital, wf_s, end, False, settings, store))
+        ho_s = runner.submit_run(holdout_spec(entry, wf.chosen_params, capital, wf_s, end, True, settings, store))
         extra = []
         if name == "bh_universe":
-            extra = [runner.submit_run(make_spec(name, {"seed": k}, capital, wf_s.holdout_start, end, settings))
+            extra = [runner.submit_run(make_spec(name, {"seed": k}, capital, wf_s.holdout_start, end, settings, store=store))
                      for k in range(1, BASKETS)]
         out = wf, ho.result(), ho_s.result(), [f.result() for f in extra]
         done.append(name)
@@ -262,9 +263,13 @@ def _sensitivity(results: pl.DataFrame, capitals: list[float], settings: Setting
 
 def _assumptions(store: Store, settings: Settings, end) -> str:
     f, c = settings.fills, settings.costs
-    ratio = ("fixed" if f.ratio_source == "fixed" else "measured (fallback used where unmeasured)")
+    if f.ratio_source == "fixed":
+        ratio = f"fixed, {f.ratio_fallback} for every category (fills.ratio_fallback)"
+    else:
+        ratio = (f"measured per category from table steam_to_market_ratio (mid of ask and bid medians), "
+                 f"{f.ratio_fallback} (fills.ratio_fallback) for categories without a row")
     items = [
-        f"Steam wallet to market.csgo price ratio: {ratio}, {f.ratio_fallback} (fills.ratio_fallback)",
+        f"Steam wallet to market.csgo price ratio: {ratio}",
         f"Spread penalty: {f.spread_penalty:.2%} per fill; participation cap: {f.participation_cap:.0%} of daily volume",
         (f"Costs: seller fee {c.seller_fee:.2%}, buyer fee {c.buyer_fee:.2%}, cash-out withdraw fee "
          f"{c.withdraw_fee_cash:.2%}, Steam-wallet withdraw fee {c.withdraw_fee_steam:.2%}, "
@@ -277,6 +282,29 @@ def _assumptions(store: Store, settings: Settings, end) -> str:
         f"Data version: {store.data_version()}",
     ]
     return "<ul>" + "".join(f"<li>{html.escape(i)}</li>" for i in items) + "</ul>"
+
+
+def _forward_rows(settings: Settings) -> pl.DataFrame | None:
+    path = settings.data_dir / "forward" / "results.parquet"
+    return pl.read_parquet(path) if path.exists() else None
+
+
+def forward_section(rows: pl.DataFrame | None) -> str:
+    """The forward paper test next to the daily backtest of the same strategy, params and dates.
+    Rendered from `cs2 forward`'s summary; it is not part of the results table or its hash."""
+    if rows is None or rows.is_empty():
+        return ""
+    header = ["strategy", "capital", "dates (UTC)", "params", "backtest", "forward", "backtest max DD",
+              "forward max DD", "backtest trades", "forward trades", "forward fees paid"]
+    body = [[r["strategy"], _money(r["capital"]), f"{r['start'][:13]}h .. {r['end'][:13]}h", r["params_json"],
+             _fmt(r["bt_net_return_cash"], "pct"), _fmt(r["net_return_cash"], "pct"),
+             _fmt(r["bt_max_drawdown_cash"], "dd"), _fmt(r["max_drawdown_cash"], "dd"),
+             _fmt(r["bt_n_trades"], "int"), _fmt(r["n_trades"], "int"), _fmt(r["fees_paid"], "usd")]
+            for r in rows.sort("strategy", "capital").iter_rows(named=True)]
+    notes = "".join(f"<li>{html.escape(c)}</li>" for c in CHOICES)
+    return ("<h2>Forward paper test</h2><p>Net return, cash-out unit. backtest = the daily engine on Steam bars, "
+            "forward = hourly on market.csgo snapshots, same strategy, parameters and dates.</p>"
+            + _table(header, body) + f"<ul>{notes}</ul>")
 
 
 def build_report(store: Store, out_dir: Path, settings: Settings | None = None,
@@ -295,6 +323,7 @@ def build_report(store: Store, out_dir: Path, settings: Settings | None = None,
         f"<h2>Verdicts</h2>"
         + _table(["strategy", "capital", "status", "first broken rule", "deflated Sharpe", "n_variants"], vrows)
         + "<h2>Results</h2>" + _results_tables(ev.results, caps)
+        + forward_section(_forward_rows(settings))
         + "<h2>Sensitivity</h2>" + _sensitivity(ev.results, caps, settings)
         + "<h2>Assumptions</h2>" + _assumptions(store, settings, store.last_day())
         + "<h2>Appendix: strategy specs</h2>" + appendix

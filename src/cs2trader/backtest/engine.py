@@ -8,7 +8,7 @@ from typing import Any
 
 import polars as pl
 
-from cs2trader.backtest.view import BarMarket, MarketData
+from cs2trader.backtest.view import MarketData
 from cs2trader.config import Settings, load_settings
 from cs2trader.errors import Cs2Error, InvariantViolation
 from cs2trader.market.events import events_hash
@@ -67,7 +67,9 @@ def _cap(volume: int, share: float) -> int:
 
 
 def apply_fills(orders: Sequence[Order], bar: pl.DataFrame, book: Book,
-                cost: CostModel, fills: FillModel) -> list[Fill]:
+                cost: CostModel, fills: FillModel, quotes: bool = False) -> list[Fill]:
+    """`quotes` (hourly market.csgo bars): a buy takes the bar's ask and a sell its bid, with no
+    ratio or spread penalty, one unit per item and side per bar; a missing quote fills nothing."""
     if not orders:
         return []
     t = bar["t"][0]
@@ -75,7 +77,7 @@ def apply_fills(orders: Sequence[Order], bar: pl.DataFrame, book: Book,
     rows = {r["market_hash_name"]: r
             for r in bar.filter(pl.col("market_hash_name").is_in(wanted)).iter_rows(named=True)}
     out: list[Fill] = []
-    traded: dict[str, int] = {}   # units already filled today per item: the volume cap is per item and day
+    traded: dict[Any, int] = {}   # units already filled today per item: the volume cap is per item and day
     for o in sorted(orders, key=lambda o: o.side != "sell"):
         if o.qty <= 0:
             raise InvariantViolation(f"order quantity must be positive: {o}")
@@ -83,9 +85,18 @@ def apply_fills(orders: Sequence[Order], bar: pl.DataFrame, book: Book,
         if r is None:
             out.append(Fill(t, o.market_hash_name, o.side, o.qty, 0, 0.0, 0.0, "no_data"))
             continue
-        cap = max(_cap(r["volume"], fills.participation_cap) - traded.get(o.market_hash_name, 0), 0)
         sign = 1 if o.side == "buy" else -1
-        price = r["price"] * _ratio(r, fills) * (1 + sign * fills.spread_penalty)
+        if quotes:
+            price = r["ask"] if o.side == "buy" else r["bid"]
+            if price is None:
+                out.append(Fill(t, o.market_hash_name, o.side, o.qty, 0, 0.0, 0.0, "no_data"))
+                continue
+            # The feed shows only the best quote; the second unit would trade at an unknown worse price
+            key, cap = (o.market_hash_name, o.side), 1
+        else:
+            price = r["price"] * _ratio(r, fills) * (1 + sign * fills.spread_penalty)
+            key, cap = o.market_hash_name, _cap(r["volume"], fills.participation_cap)
+        cap = max(cap - traded.get(key, 0), 0)
         if o.limit is not None and sign * (price - o.limit) > 0:
             out.append(Fill(t, o.market_hash_name, o.side, o.qty, 0, price, 0.0, "limit"))
             continue
@@ -123,7 +134,7 @@ def apply_fills(orders: Sequence[Order], bar: pl.DataFrame, book: Book,
                     lot.qty -= take
                     left -= take
             book.lots = [l for l in book.lots if l.qty > 0]
-        traded[o.market_hash_name] = traded.get(o.market_hash_name, 0) + qty
+        traded[key] = traded.get(key, 0) + qty
         book.fees_paid += fee
         if book.balance < -1e-9 or any(l.qty < 0 for l in book.lots):
             raise InvariantViolation(f"balance {book.balance} after {o}")
@@ -131,13 +142,17 @@ def apply_fills(orders: Sequence[Order], bar: pl.DataFrame, book: Book,
     return out
 
 
+def _mark(row: Mapping[str, Any], fills: FillModel, quotes: bool) -> float:
+    # Hourly: what a sale would fetch now is the bid; an item nobody bids for is valued at its ask.
+    if quotes:
+        return row["bid"] if row["bid"] is not None else row["price"]
+    return row["price"] * _ratio(row, fills) * (1 - fills.spread_penalty)
+
+
 def _equity(t: date, book: Book, last: dict[str, Mapping[str, Any]], cost: CostModel,
-            fills: FillModel) -> EquityPoint:
-    held = sum(
-        l.qty * last[l.market_hash_name]["price"] * _ratio(last[l.market_hash_name], fills)
-        * (1 - fills.spread_penalty) * (1 - cost.seller_fee)
-        for l in book.lots
-    )
+            fills: FillModel, quotes: bool = False) -> EquityPoint:
+    held = sum(l.qty * _mark(last[l.market_hash_name], fills, quotes) * (1 - cost.seller_fee)
+               for l in book.lots)
     gross = book.balance + held
     return EquityPoint(t, book.balance, held, gross * (1 - cost.withdraw_fee_cash),
                        gross * (1 - cost.withdraw_fee_steam), book.fees_paid)
@@ -166,7 +181,12 @@ def run(spec: RunSpec, store: Store, settings: Settings | None = None,
     strategy = REGISTRY[spec.strategy].factory(spec.params)
     if data is None:
         data = load_market(store, spec.start, spec.end, settings)
-    days = [d for d in data.days if spec.start <= d <= spec.end]
+    # Hourly runs get their market from `forward`; bars are then stamped with datetimes.
+    hourly = spec.freq == "1h"
+    if hourly:
+        days = [d for d in data.days if spec.start <= d.date() <= spec.end]
+    else:
+        days = [d for d in data.days if spec.start <= d <= spec.end]
     if not days:
         raise Cs2Error(f"no bars between {spec.start} and {spec.end}: nothing to run on")
     book = Book(spec.capital)
@@ -178,27 +198,28 @@ def run(spec: RunSpec, store: Store, settings: Settings | None = None,
     for i, t in enumerate(days):
         today = data.by_day[t]
         cost = cost_at(spec.costs, t)
-        trades += (done := apply_fills(pending, today, book, cost, spec.fills))
+        trades += (done := apply_fills(pending, today, book, cost, spec.fills, hourly))
         if sold := [f.t for f in done if f.side == "sell" and f.qty_filled]:
             last_sale = max(sold)
         held = {l.market_hash_name for l in book.lots}
         if held:
             last.update((r["market_hash_name"], r) for r in
                         today.filter(pl.col("market_hash_name").is_in(held)).iter_rows(named=True))
-        equity.append(_equity(t, book, last, cost, spec.fills))
-        next_t = days[i + 1] if i + 1 < len(days) else t + timedelta(days=1)
-        pending = strategy.decide(BarMarket(data, t), BookView(book, next_t))
+        equity.append(_equity(t, book, last, cost, spec.fills, hourly))
+        next_t = days[i + 1] if i + 1 < len(days) else t + (timedelta(hours=1) if hourly else timedelta(days=1))
+        pending = strategy.decide(data.view(t), BookView(book, next_t))
         for o in pending:
             if o.qty <= 0:
                 raise InvariantViolation(f"strategy {spec.strategy} ordered {o}")
-    data_version = store.data_version()
+    data_version = store.data_version() + data.version
     spec_json = json.dumps(asdict(spec), default=str, sort_keys=True)
     # Universe and regime settings change what strategies see, so they are part of the run identity.
     view_json = json.dumps([asdict(settings.universe), asdict(settings.regimes), events_hash()], sort_keys=True)
     run_id = hashlib.sha256((spec_json + view_json + data_version).encode()).hexdigest()[:16]
     return RunResult(
         run_id, spec, data_version,
-        pl.DataFrame([asdict(f) for f in trades], schema=FILL_SCHEMA),
+        pl.DataFrame([asdict(f) for f in trades],
+                     schema={**FILL_SCHEMA, "t": pl.Datetime("us", "UTC")} if hourly else FILL_SCHEMA),
         pl.DataFrame([asdict(e) for e in equity]),
         last_sale + timedelta(days=cost_at(spec.costs, last_sale).cashout_hold_days) if last_sale else None,
     )

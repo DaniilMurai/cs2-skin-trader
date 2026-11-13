@@ -1,7 +1,11 @@
 import http.client
 import json
+import os
 import sys
+import threading
 import time
+import typing
+import urllib.parse
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
@@ -14,18 +18,22 @@ from cs2trader.backtest.runs import save_run
 from cs2trader.config import load_settings
 from cs2trader.models import FxRate, RunSpec, SteamPoint
 from cs2trader.store import Store
-from cs2trader.ui import settings_api
+from cs2trader.ui import jobs, settings_api
 from cs2trader.ui.jobs import JobRunner
 from cs2trader.ui.security import TOKEN_HEADER, scrub, secret_values
 from cs2trader.ui.server import App, start_in_thread
 
 SECRET = "SECRET-cookie-value-123456"
+SECRETS = {"STEAM_LOGIN_SECURE": SECRET, "MARKETCSGO_API_KEY": "abcdefgh-key-98765",
+           "CF_WORKER_URL": "https://buffer-worker.example.workers.dev", "CF_WORKER_TOKEN": "cf-token-value-24680"}
 
 
 @pytest.fixture
 def env(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    (tmp_path / ".env").write_text(f"STEAM_LOGIN_SECURE={SECRET}\nMARKETCSGO_API_KEY=abcdefgh-key-98765\n")
+    for name in SECRETS:
+        monkeypatch.delenv(name, raising=False)
+    (tmp_path / ".env").write_text("".join(f"{k}={v}\n" for k, v in SECRETS.items()))
     (tmp_path / "cs2.toml").write_text('data_dir = "data"\nreports_dir = "reports"\n\n[mc]\ninterval_s = 2.5\n')
     data = tmp_path / "data"
     store = Store(data)
@@ -103,14 +111,47 @@ def test_no_response_contains_a_secret_value(env):
     paths = ["/", "/api/overview", "/api/verdict", "/api/runs", "/api/market/index", "/api/collector",
              "/api/strategies", "/api/settings", "/api/jobs", "/api/home", "/static/app.js", "/static/ui.js",
              "/static/pages.js", "/static/style.css", "/reports/2026-01-01/report.html"]
-    for p in secret_values(app.env_path):
-        assert p
+    from cs2trader.config import SecretName
+    assert set(SECRETS) == set(typing.get_args(SecretName))
+    assert sorted(secret_values(app.env_path)) == sorted(SECRETS.values())
     for path in paths:
         _, body = call(app, "GET", path)
-        for value in secret_values(app.env_path):
+        for value in SECRETS.values():
             assert value.encode() not in body, path
     # the filter itself: a payload that does contain one is redacted
     assert SECRET.encode() not in scrub(f"x {SECRET} y".encode(), secret_values(app.env_path))
+
+
+def test_post_and_error_bodies_redact_every_secret(env, monkeypatch):
+    app, _ = env
+    for name, value in SECRETS.items():
+        echoed = urllib.parse.quote(value, safe="")
+        # 200: the item name comes back in the payload
+        status, body = call(app, "GET", f"/api/market/item?name={echoed}")
+        assert status == 200 and value.encode() not in body and b"[redacted]" in body, name
+        # 4xx on GET and on POST: the error text quotes what was sent
+        status, body = call(app, "GET", f"/api/run/{echoed}")
+        assert 400 <= status < 500 and value.encode() not in body, name
+        status, body = call(app, "POST", "/api/jobs", {"strategy": value, "capital": 1, "start": "2024-01-01",
+                                                       "end": "2024-02-01"})
+        assert status == 400 and value.encode() not in body and b"[redacted]" in body, name
+        status, body = call(app, "POST", "/api/settings", {"changes": {value: 1}})
+        assert status == 422 and value.encode() not in body and b"[redacted]" in body, name
+
+    # 5xx: exception text is echoed by both handlers (a bad ?hours is now a 400, so force the failure)
+    monkeypatch.setattr("cs2trader.ui.api.collector", lambda *a, **k: (_ for _ in ()).throw(
+        RuntimeError(" ".join(SECRETS.values()))))
+    status, body = call(app, "GET", "/api/collector")
+    assert status == 500 and body.count(b"[redacted]") == 4
+    for value in SECRETS.values():
+        assert value.encode() not in body
+    def boom(*a, **k):
+        raise RuntimeError(" ".join(SECRETS.values()))
+    monkeypatch.setattr(app.jobs, "start_backtest", boom)
+    status, body = call(app, "POST", "/api/jobs", {})
+    assert status == 500 and body.count(b"[redacted]") == 4
+    for value in SECRETS.values():
+        assert value.encode() not in body
 
 
 def test_route_list_has_no_order_endpoint():
@@ -199,6 +240,43 @@ def test_invalid_setting_is_rejected_and_file_unchanged(env):
     assert app.config_path.read_text() == before
 
 
+@pytest.mark.parametrize("changes", [{"capitals": [float("inf")]}, {"capitals": [100, float("nan")]},
+                                     {"fills.spread_penalty": float("nan")}, {"fills.spread_penalty": float("inf")},
+                                     [1], "x"])
+def test_non_finite_numbers_and_non_object_changes_are_422_and_file_unchanged(env, changes):
+    app, _ = env
+    before = app.config_path.read_text()
+    status, body = call(app, "POST", "/api/settings", {"changes": changes})
+    assert status == 422 and json.loads(body)["errors"]
+    assert app.config_path.read_text() == before
+    assert not app.config_path.with_suffix(".toml.bak").exists()
+
+
+def test_unchanged_save_leaves_file_and_backup_alone(env):
+    app, _ = env
+    assert call(app, "POST", "/api/settings", {"changes": {"fills.spread_penalty": 0.04}})[0] == 200
+    bak = app.config_path.with_suffix(".toml.bak")
+    old, saved = bak.read_text(), app.config_path.read_text()
+    status, body = call(app, "POST", "/api/settings", {"changes": {"fills.spread_penalty": 0.04}})
+    assert status == 200 and json.loads(body)["ok"]
+    assert call(app, "POST", "/api/settings", {"changes": {}})[0] == 200
+    assert bak.read_text() == old and app.config_path.read_text() == saved
+
+
+def test_bad_content_length_and_query_ints_are_400(env):
+    app, _ = env
+    for length in ("-1", "abc"):
+        conn = http.client.HTTPConnection("127.0.0.1", app.port, timeout=5)
+        conn.putrequest("POST", "/api/settings", skip_host=True)
+        for k, v in {"Host": f"127.0.0.1:{app.port}", TOKEN_HEADER: app.token, "Content-Length": length}.items():
+            conn.putheader(k, v)
+        conn.endheaders()
+        assert conn.getresponse().status == 400, length
+        conn.close()
+    for path in ("/api/market/categories?days=abc", "/api/collector?hours=1.5"):
+        assert call(app, "GET", path)[0] == 400, path
+
+
 def test_valid_setting_is_written_with_backup(env):
     app, _ = env
     old = app.config_path.read_text()
@@ -270,6 +348,55 @@ def test_failed_job_reports_the_error_and_second_job_is_refused_while_running(en
     j = wait_job(app)
     assert j["state"] == "failed" and any("no bars" in line for line in j["lines"])
     assert status2 in (202, 409)
+
+
+SLEEPER = "import time; print('started', flush=True); time.sleep(120)"
+
+
+def test_parallel_starts_take_one_slot(env, monkeypatch):
+    app, _ = env
+    monkeypatch.setattr(jobs, "LAUNCH", SLEEPER)
+    form = {"strategy": "cash", "capital": 100, "start": "2024-01-05", "end": "2024-02-05"}
+    gate, statuses = threading.Barrier(6), []
+
+    def fire():
+        gate.wait()
+        statuses.append(call(app, "POST", "/api/jobs", form)[0])
+    threads = [threading.Thread(target=fire) for _ in range(6)]
+    try:
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        assert sorted(statuses) == [202, 409, 409, 409, 409, 409]
+    finally:
+        app.jobs.stop()
+
+
+def test_job_runs_at_nice_19_and_stop_ends_it(env, monkeypatch):
+    app, _ = env
+    monkeypatch.setattr(jobs, "LAUNCH", SLEEPER)
+    assert call(app, "POST", "/api/jobs/stop", {}, token=False)[0] == 403
+    assert call(app, "POST", "/api/jobs/stop", {})[0] == 409
+    form = {"strategy": "cash", "capital": 100, "start": "2024-01-05", "end": "2024-02-05"}
+    assert call(app, "POST", "/api/jobs", form)[0] == 202
+    pid = app.jobs.job["proc"].pid
+    try:
+        # the child lowers its own priority first thing; its first output line proves it got that far
+        for _ in range(100):
+            if json.loads(call(app, "GET", "/api/jobs")[1])["lines"]:
+                break
+            time.sleep(0.1)
+        assert os.getpriority(os.PRIO_PROCESS, pid) == 19
+        status, body = call(app, "POST", "/api/jobs/stop", {})
+        assert status == 200 and json.loads(body)["state"] == "stopped"
+        assert json.loads(call(app, "GET", "/api/jobs")[1])["state"] == "stopped"
+        with pytest.raises(ProcessLookupError):
+            os.kill(pid, 0)
+        # the slot is free again
+        assert call(app, "POST", "/api/jobs", form)[0] == 202
+    finally:
+        app.jobs.stop()
 
 
 def test_job_form_validation(env):

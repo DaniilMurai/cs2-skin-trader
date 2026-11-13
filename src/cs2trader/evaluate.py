@@ -13,6 +13,8 @@ import polars as pl
 from cs2trader.backtest.engine import load_market, run
 from cs2trader.backtest.view import MarketData
 from cs2trader.config import Settings, WfSettings, load_settings
+from cs2trader.errors import ConfigError
+from cs2trader.market.ratio import load_fill_ratios
 from cs2trader.models import FillModel, Metrics, Regime, RunResult, RunSpec, Verdict
 from cs2trader.parallel import LocalRunner
 from cs2trader.store import Store
@@ -131,15 +133,21 @@ def grid_variants(grid: Mapping[str, Sequence[Any]]) -> list[dict[str, Any]]:
 
 
 def make_spec(strategy: str, params: Mapping[str, Any], capital: float, start: date, end: date,
-              settings: Settings, stress: bool = False) -> RunSpec:
+              settings: Settings, stress: bool = False, store: Store | None = None) -> RunSpec:
     c, f = settings.costs, settings.fills
     cost_k = settings.verdict.cost_stress if stress else 1.0
     spread_k = settings.verdict.spread_stress if stress else 1.0
     costs = replace(c, seller_fee=c.seller_fee * cost_k, buyer_fee=c.buyer_fee * cost_k,
                     withdraw_fee_cash=c.withdraw_fee_cash * cost_k,
                     withdraw_fee_steam=c.withdraw_fee_steam * cost_k)
+    ratio = {}
+    if f.ratio_source == "measured":
+        # Silently falling back to the fixed number would label a fixed-ratio run as measured
+        if store is None:
+            raise ConfigError("fills.ratio_source = \"measured\" needs the store to read steam_to_market_ratio")
+        ratio = load_fill_ratios(store)
     fills = FillModel(participation_cap=f.participation_cap, spread_penalty=f.spread_penalty * spread_k,
-                      ratio_fallback=f.ratio_fallback)
+                      ratio=ratio, ratio_fallback=f.ratio_fallback)
     return RunSpec(strategy, dict(params), capital, start, end, costs=(costs,), fills=fills)
 
 
@@ -161,7 +169,7 @@ def _choose(entry: StrategyEntry, capital: float, start: date, end: date, store:
             sharpes: list[float]) -> dict[str, Any]:
     best, best_sharpe = None, -math.inf
     for params in grid_variants(entry.grid):
-        res = run(make_spec(entry.name, params, capital, start, end, settings), store, settings, data)
+        res = run(make_spec(entry.name, params, capital, start, end, settings, store=store), store, settings, data)
         log.append((entry.name, json.dumps(params, sort_keys=True), fold, capital, res.run_id))
         sharpe = metrics(res).sharpe_cash
         sharpes.append(sharpe / ANNUALISATION)
@@ -198,7 +206,7 @@ def walk_forward(entry: StrategyEntry, capital: float, store: Store, s: WfSettin
     final_start = s.holdout_start - timedelta(days=s.train_days)
     windows = [(tr0, tr1) for tr0, tr1, _, _ in fold_windows] + [(final_start, last_tuned)]
     tuned = [f.result() for f in [runner.submit_tune(entry, capital, a, b, i) for i, (a, b) in enumerate(windows)]]
-    tests = [runner.submit_run(make_spec(entry.name, tuned[i][0], capital, te0, te1, settings))
+    tests = [runner.submit_run(make_spec(entry.name, tuned[i][0], capital, te0, te1, settings, store=store))
              for i, (_, _, te0, te1) in enumerate(fold_windows)]
     log = [row for _, rows, _ in tuned for row in rows]
     sharpes = [x for _, _, xs in tuned for x in xs]
@@ -216,8 +224,8 @@ def walk_forward(entry: StrategyEntry, capital: float, store: Store, s: WfSettin
 
 
 def holdout_spec(entry: StrategyEntry, params: Mapping[str, Any], capital: float, s: WfSettings,
-                 end: date, stress: bool, settings: Settings) -> RunSpec:
-    return make_spec(entry.name, params, capital, s.holdout_start, end, settings, stress)
+                 end: date, stress: bool, settings: Settings, store: Store | None = None) -> RunSpec:
+    return make_spec(entry.name, params, capital, s.holdout_start, end, settings, stress, store)
 
 
 def holdout(entry: StrategyEntry, params: Mapping[str, Any], capital: float, store: Store,
@@ -225,7 +233,7 @@ def holdout(entry: StrategyEntry, params: Mapping[str, Any], capital: float, sto
             end: date | None = None, data: MarketData | None = None) -> RunResult:
     settings = settings or load_settings()
     end = end or store.last_day()
-    spec = make_spec(entry.name, params, capital, s.holdout_start, end, settings, stress)
+    spec = make_spec(entry.name, params, capital, s.holdout_start, end, settings, stress, store)
     return run(spec, store, settings, data)
 
 

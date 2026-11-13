@@ -1,6 +1,6 @@
 import hashlib
 from collections.abc import Mapping, Sequence
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Literal
 
@@ -29,6 +29,9 @@ CREATE TABLE IF NOT EXISTS variants_tried (
     PRIMARY KEY (strategy, params_json, fold, capital));
 CREATE TABLE IF NOT EXISTS regimes (
     t DATE PRIMARY KEY, index_level DOUBLE, ret DOUBLE, regime VARCHAR);
+CREATE TABLE IF NOT EXISTS steam_to_market_ratio (
+    category VARCHAR, side VARCHAR, median DOUBLE, q25 DOUBLE, q75 DOUBLE, n_items INTEGER,
+    fallback BOOLEAN, PRIMARY KEY (category, side));
 """
 
 
@@ -251,6 +254,13 @@ class Store:
         self.db.execute("INSERT INTO regimes SELECT t, index_level, ret, regime FROM labels")
         return labels.height
 
+    def write_ratio(self, ratio: pl.DataFrame) -> int:
+        # Replaced wholesale: the table is one calibration, not a history
+        self.db.execute("DELETE FROM steam_to_market_ratio")
+        self.db.execute("INSERT INTO steam_to_market_ratio SELECT category, side, median, q25, q75, n_items, "
+                        "fallback FROM ratio")
+        return ratio.height
+
     def record_variants(self, rows: Sequence[tuple[str, str, int, float, str]]) -> None:
         self.db.executemany("INSERT OR REPLACE INTO variants_tried VALUES (?, ?, ?, ?, ?)", rows)
 
@@ -317,6 +327,32 @@ class Store:
         """, params=[start, end]).pl()
         return cap_price_jumps(bars)
 
+    def hourly_bars(self, start: datetime, end: datetime) -> pl.DataFrame:
+        """market.csgo bars for hours `start`..`end`: the bar stamped h holds what was known at h.
+
+        ask / bid = the item's newest snapshot with feed_time in (h - 1h, h]; an hour without a
+        snapshot gets no bar (stale quotes are not carried). price = ask, or bid when the item has
+        no ask: sales are polled for few items and arrive late, quotes are known at h and in USD.
+        volume = sales with ts in (h - 1h, h] that were already fetched at h, 0 when none."""
+        # A feed exactly on the hour belongs to that hour; anything later is first known at the next one
+        stamp = "date_trunc('hour', {c}) + CASE WHEN {c} > date_trunc('hour', {c}) THEN INTERVAL 1 HOUR ELSE INTERVAL 0 HOUR END"
+        lo, hi = start - timedelta(hours=1), end
+        return self.db.sql(f"""
+            WITH a AS (SELECT market_hash_name, {stamp.format(c="feed_time")} AS t, arg_max(ask, feed_time) AS ask
+                       FROM asks WHERE feed_time > $lo AND feed_time <= $hi GROUP BY ALL),
+                 b AS (SELECT market_hash_name, {stamp.format(c="feed_time")} AS t, arg_max(bid, feed_time) AS bid
+                       FROM bids WHERE feed_time > $lo AND feed_time <= $hi GROUP BY ALL),
+                 s AS (SELECT market_hash_name, {stamp.format(c="ts")} AS t, count(*) AS volume
+                       FROM sales WHERE ts > $lo AND ts <= $hi AND fetched_at <= {stamp.format(c="ts")}
+                       GROUP BY ALL)
+            SELECT market_hash_name, t, COALESCE(q.ask, q.bid) AS price,
+                   CAST(COALESCE(s.volume, 0) AS BIGINT) AS volume, q.ask, q.bid, i.category AS category
+            FROM (SELECT * FROM a FULL OUTER JOIN b USING (market_hash_name, t)) q
+            LEFT JOIN s USING (market_hash_name, t)
+            LEFT JOIN items i ON i.name = market_hash_name
+            ORDER BY t, market_hash_name
+        """, params={"lo": lo, "hi": hi}).pl()
+
     def data_version(self) -> str:
         """Fingerprint of the daily-bar inputs by content (an XOR of row hashes per table), so re-categorised
         items or rescaled prices change it and unrelated collector snapshots do not."""
@@ -328,7 +364,7 @@ class Store:
         }
         parts = []
         for table, row_hash in fingerprints.items():
-            n, x = self.db.execute(f"SELECT count(*), bit_xor({row_hash}) FROM {table}").fetchone()
+            n, x = self.db.execute(f"SELECT count(*), bit_xor({row_hash}) FROM {table}").fetchall()[0]
             parts.append(f"{table}={n}:{x}")
         return hashlib.sha256("|".join(parts).encode()).hexdigest()[:16]
 
@@ -336,6 +372,6 @@ class Store:
         """Latest feed_time per collector kind: the input of hourly (forward) runs, not of daily bars."""
         parts = []
         for kind in _VIEW_COLUMNS:
-            latest = self.db.execute(f"SELECT CAST(max(feed_time) AS VARCHAR) FROM {kind}").fetchone()[0]
+            latest = self.db.execute(f"SELECT CAST(max(feed_time) AS VARCHAR) FROM {kind}").fetchall()[0][0]
             parts.append(f"{kind}={latest}")
         return hashlib.sha256("|".join(parts).encode()).hexdigest()[:16]

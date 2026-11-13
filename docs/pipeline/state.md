@@ -1,7 +1,19 @@
 # Pipeline state
 
 Project: cs2-skin-trader (research)
-Updated: 2026-11-09
+Updated: 2026-11-13
+Mode: orchestrated (since 2026-11-13; orchestrator branch `claude/pipeline-task-orchestration-0b15c3`)
+
+Orchestrator run 2026-11-13 (rules from the author: spend no money, keep the Mac responsive → at most 2 children,
+tests under `nice -n 19`, no full report runs; child reports in `docs/pipeline/reports/`). All children finished, none running.
+- merged, each DoD re-run by the orchestrator (315 tests on the merged branch): T-17 code, T-34, T-47 code, T-32 code,
+  T-42 UI re-audit (report), T-63, T-64, T-65. Not pushed; `main` not touched.
+- code-only, real runs wait for data: T-17 `cs2 ratio` and T-47 `cs2 arbitrage` (≥ 14 days, ~2026-11-23/24),
+  T-32 `cs2 forward` (≥ 28 days, ~2026-12-07, T-67 first). 5 days of snapshots on 2026-11-13.
+- needs the author: T-42 (look at the UI), T-46 (Cloudflare token in `.env`), T-54 (`npx wrangler deploy`), T-68 (sales data),
+  T-08 (GitHub runs the hourly cron only every ~6–8 h: 12 scheduled runs since 2026-11-10, all green)
+- contracts.md not yet updated with the children's proposals (reports T-17, T-34, T-47, T-32, T-63): do it at stage 9
+- next startable without the author: T-66 after T-47's real run; nothing else until the data gates open
 
 Spike S-10 written 2026-11-11 (docs/pipeline/spikes/10-cloudflare-collector/, waits for the author to deploy it): can a Cloudflare Worker cron + R2 replace the GitHub collector (T-08)?
 Plan amended 2026-11-11: step 7 (local UI), AC-15…18, tasks T-35…T-42 (author's request); next: T-35 (re-run the full report), then the UI tasks in order.

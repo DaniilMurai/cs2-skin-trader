@@ -38,6 +38,9 @@ class MarketData:
     regimes, first bar per item) is point-in-time by construction, so slicing it at `now`
     is safe; the views below only ever slice at or before `now`."""
 
+    # Appended to the store's data version in the run identity; the daily market adds nothing.
+    version = ""
+
     def __init__(self, bars: pl.DataFrame, items: pl.DataFrame,
                  us: UniverseSettings, rs: RegimesSettings) -> None:
         self.days: list[date] = sorted(bars["t"].unique().to_list())
@@ -71,6 +74,9 @@ class MarketData:
         self.by_day = {d: bars.slice(starts[i], sizes[i]) for i, d in enumerate(self.days)}
         self._universe = {}
         return self
+
+    def view(self, now: date) -> BarMarket:
+        return BarMarket(self, now)
 
     def window(self, now: date, lookback: int) -> pl.DataFrame:
         frames = [self.by_day[d] for d in self._days_in(now - timedelta(days=lookback), now)]
