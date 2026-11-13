@@ -177,8 +177,13 @@ def make_handler(app: App):
     return Handler
 
 
+class UIServer(ThreadingHTTPServer):
+    # The default backlog of 5 drops connections when a browser opens several at once (broken pipe on connect).
+    request_queue_size = 32
+
+
 def create_server(app: App, port: int = 0) -> ThreadingHTTPServer:
-    server = ThreadingHTTPServer((BIND_HOST, port), make_handler(app))
+    server = UIServer((BIND_HOST, port), make_handler(app))
     app.port = server.server_address[1]
     return server
 
