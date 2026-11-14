@@ -9,6 +9,7 @@ from cs2trader.strategies.benchmarks import (
     Cash,
 )
 from cs2trader.strategies.event import EVENT_GRID, EVENT_SPEC, EventStrategy
+from cs2trader.strategies.event_small import EVENT_SMALL_GRID, EVENT_SMALL_SPEC, EventSmall
 from cs2trader.strategies.flip import FLIP_GRID, FLIP_SPEC, CheapFlip
 from cs2trader.strategies.lowturn import (
     CASEDIP_GRID,
@@ -85,4 +86,5 @@ REGISTRY: Mapping[str, StrategyEntry] = {
     "cheap_reversion": StrategyEntry("cheap_reversion", "mean_reversion", CheapReversion, CHEAP_GRID, CHEAP_SPEC),
     "xs_momentum_liquid": StrategyEntry("xs_momentum_liquid", "momentum", XsMomentumLiquid, XSL_GRID, XSL_SPEC),
     "cheap_flip": StrategyEntry("cheap_flip", "flip", CheapFlip, FLIP_GRID, FLIP_SPEC),
+    "event_small": StrategyEntry("event_small", "event", EventSmall, EVENT_SMALL_GRID, EVENT_SMALL_SPEC),
 }

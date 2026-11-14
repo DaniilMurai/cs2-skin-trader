@@ -117,6 +117,12 @@ STRATEGIES: dict[str, dict[str, str]] = {
         "summary": "Trade around known calendar events: hold a Major tournament's sticker capsules around "
                    "the tournament, or buy a case on the day it leaves the active drop pool and sell it later.",
     },
+    "event_small": {
+        "label": "Buy a Major's capsules after the tournament",
+        "summary": "Buy the sticker capsules of a Major tournament some time after it has ended, when they "
+                   "are cheap and still sell at least 20 times a day, in small amounts, and hold them for "
+                   "half a year or a year.",
+    },
 }
 
 FAMILIES = {"benchmark": "Yardstick, not a strategy", "video": "From the video", "trend": "Trend following",
@@ -157,6 +163,8 @@ PARAMS: dict[tuple[str, str], tuple[str, str, str]] = {
     ("event", "pre"): ("Buy before the Major by", "days", "Only for majors: how early the capsules are bought."),
     ("event", "post"): ("Hold after the Major for", "days", "Only for majors: how long the capsules are kept after the tournament ends."),
     ("event", "hold"): ("Hold a case for", "days", "Only for cases: how long a case is kept after it leaves the drop pool."),
+    ("event_small", "wait"): ("Buy after the Major ends by", "days", "How long after the tournament's last day the capsules are bought."),
+    ("event_small", "hold"): ("Hold the capsules for", "days", "How long the capsules are kept, counted from the first day they may be bought."),
 }
 
 GROUP_INTROS = {
