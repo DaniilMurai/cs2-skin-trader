@@ -4,20 +4,22 @@ Project: cs2-skin-trader (research)
 Updated: 2026-11-13
 Mode: orchestrated (since 2026-11-13; orchestrator branch `claude/pipeline-task-orchestration-0b15c3`)
 
-Orchestrator run 2026-11-13 (rules from the author: spend no money, keep the Mac responsive → at most 2 children,
-tests under `nice -n 19`, no full report runs; child reports in `docs/pipeline/reports/`). All children finished, none running.
-- merged, each DoD re-run by the orchestrator (346 tests): T-17 code, T-34, T-47 code, T-32 code, T-42 (closed by the author),
-  T-63, T-64, T-65 (UI audit fixes), T-55 (small-budget cost model), T-56 (liquidity filter and position cap).
-  `main` has everything up to a350a3b; T-55 and T-56 are on the orchestrator branch only. Nothing pushed.
-- operations done: T-46 confirmed; T-54 Worker redeployed with asks, bids, waxpeer (Skinport bans Cloudflare, Mac-only);
-  T-68 `cs2 collect pull` ran for the first time (sales 2026-11-09…13) and the Mac launchd job now also polls sales hourly
-- code-only, real runs wait for data: T-17 `cs2 ratio` and T-47 `cs2 arbitrage` (≥ 14 days, ~2026-11-23/24),
-  T-32 `cs2 forward` (≥ 28 days, ~2026-12-07, T-67 first)
-- T-55 changed every run_id and the next report's results hash (minimum fee, price rounding); `min_fee = 0.01` is an assumption
-- open for the author: which of T-57…T-60 to run (the orchestrator advised against more daily-bar variants on the reused holdout);
-  T-08 (GitHub cron fires every ~6–8 h); T-59 and T-66 overlap, T-62 and T-67 overlap
-- contracts.md not yet updated with the children's proposals (reports T-17, T-34, T-47, T-32, T-63, T-55-costs, T-56-liquidity)
-- next startable without the author: T-69 (UI labels), T-58 cheap-item flipping (the least holdout-dependent of group J)
+Orchestrator run 2026-11-13/14 (rules from the author: spend no money, keep the Mac responsive → at most 2 children,
+tests under `nice -n 19`, real-data runs with `--jobs 2`; child reports in `docs/pipeline/reports/`). No child is running.
+- merged, each suite re-run by the orchestrator (385 tests): T-17 code, T-34, T-47 code, T-32 code, T-42, T-63…T-65 (UI),
+  T-55, T-56, T-57, T-58, T-59 code (covers T-66), T-60. `main` has everything up to a350a3b; later work is on the
+  orchestrator branch only. Nothing pushed.
+- group J walk-forward results on real data (2020-01…2025-09, holdout never read; cash −5.0%, bh_median −58.0% / −50.6%):
+  xs_momentum_liquid −99.3% / −96.8%, cheap_flip −93.2% / −89.6%, event_small −70.0% / −58.7% at $50 / $100. All fail.
+  Variants tried for AC-19(e): 16 + 12 + 4.
+- operations: T-46 confirmed; T-54 Worker redeployed with asks, bids, waxpeer; T-68 sales pulled and the Mac job polls sales hourly
+- code-only, real runs wait for data: `cs2 ratio` and `cs2 arbitrage` (≥ 14 days, ~2026-11-23/24), `cs2 arbitrage --mode cross`
+  (≥ 2026-11-26), `cs2 forward` (≥ 28 days, ~2026-12-07, T-67 first)
+- T-55 changed every run_id and the next report's results hash; `min_fee = 0.01` is an assumption
+- open: T-61 (verdict extension), T-62 (full report + forward), T-69 (UI labels), T-70 (long-horizon Major check), T-08;
+  six idle `multiprocessing` workers from 2026-11-11 (pids 18748…) from the main checkout's venv, left alone
+- contracts.md not yet updated with the children's proposals (every report in `reports/` lists them)
+- real-data clone used by the children: scratchpad `realdata/` of the orchestrator session (APFS clone, may be cleaned)
 
 Spike S-10 written 2026-11-11 (docs/pipeline/spikes/10-cloudflare-collector/, waits for the author to deploy it): can a Cloudflare Worker cron + R2 replace the GitHub collector (T-08)?
 Plan amended 2026-11-11: step 7 (local UI), AC-15…18, tasks T-35…T-42 (author's request); next: T-35 (re-run the full report), then the UI tasks in order.

@@ -554,7 +554,7 @@ T-59 waits for ≥ 14 days of snapshots (~2026-11-24), T-62 for ≥ 28 days (~20
       Executor: main loop
       Depends on: T-47, T-54, T-55
 
-- [ ] T-60 — Event and release plays on small positions (spike 09 calendar)
+- [x] T-60 — *(2026-11-14: `event_small` (a Major's sticker capsules bought `wait` days after it ends); measured to 2025-09-30: release plays lose 46–85% in a month, Major start −61%, pool exits flip sign with the hold; only "Major end + 90 d, hold 180–365 d" is positive (+33% / +93% median, 18–19 events); walk-forward −70.0% at $50 and −58.7% at $100 (cash −5.0%), beats cash in 6 of 24 folds; 4 variants; the 91-day folds cannot test the long hold → T-70; `reports/T-60-events.md`)* Event and release plays on small positions (spike 09 calendar)
       DoD: strategy registered, tests green, walk-forward result logged
       Executor: main loop
       Depends on: T-55, S-09
@@ -612,3 +612,7 @@ T-59 waits for ≥ 14 days of snapshots (~2026-11-24), T-62 for ≥ 28 days (~20
       DoD: `uv run pytest tests/test_ui.py` green with a test per new setting; both reasons show a plain-language label
       Executor: subagent
       Depends on: T-56
+
+- [ ] T-70 — Long-horizon check of "buy a Major's capsules 90 days after it ends, hold 180–365 days" (from T-60: the walk-forward folds restart in cash every 91 days, so the hold was never tested as such). Write the test design and the pass rule into decisions.md before any result is read; 18–19 events only, so the result can at most say "not contradicted"
+      Executor: main loop
+      Depends on: T-60
