@@ -543,7 +543,7 @@ T-59 waits for ≥ 14 days of snapshots (~2026-11-24), T-62 for ≥ 28 days (~20
       Executor: main loop
       Depends on: T-56
 
-- [ ] T-58 — Cheap-item flipping: buy under $5 where the net margin after fees exceeds the spread, on hourly snapshots and Steam history
+- [x] T-58 — *(2026-11-14: `cheap_flip`; base rate on 7.72 M item-days under $5 with ≥ 20 sales a day: a round trip beats its cost in 8.3% of cases, median net −12.3%, not predictable on the buy day; walk-forward −93.2% at $50 and −89.6% at $100 (cash −5.0%), about the same at `min_fee` 0.001; beats cash in 5 / 3 of 24 folds; 12 variants; fails on walk-forward, holdout not touched; no hourly run (6 days of snapshots); `reports/T-58-flipping.md`)* Cheap-item flipping: buy under $5 where the net margin after fees exceeds the spread, on hourly snapshots and Steam history
       DoD: strategy registered, tests green, walk-forward result logged
       Executor: main loop
       Depends on: T-56
