@@ -90,3 +90,52 @@ def test_benchmark_for_the_verdict_is_the_median_of_many_baskets(bars):
     med = t.filter((pl.col("strategy") == "bh_median") & (pl.col("period") == "holdout")
                    & (pl.col("regime") == "all") & (pl.col("unit") == "cash"))
     assert sorted(med["capital"]) == [100.0, 1000.0]
+
+
+class NoHoldoutStore(Store):
+    """Fails the run if anything asks for a bar on or after the holdout start."""
+
+    def daily_bars(self, start, end):
+        assert end < WF.holdout_start, f"holdout bars requested: {start} .. {end}"
+        return super().daily_bars(start, end)
+
+    def last_day(self):
+        raise AssertionError("the last stored day is a holdout day")
+
+
+@pytest.mark.parametrize("jobs,names", [(1, NAMES), (2, ["cash", "bh_universe", "mean_reversion"])])
+def test_walk_forward_only_never_loads_a_holdout_bar(bars, tmp_path, jobs, names):
+    import json
+
+    store = NoHoldoutStore(bars)
+    path = build_report(store, tmp_path, SETTINGS, names, jobs=jobs, walk_forward_only=True)
+    assert path.parent.name.endswith("-walk-forward")
+    assert "Walk-forward only" in path.read_text().split("\n", 1)[0]
+    t = pl.read_parquet(path.parent / "results.parquet")
+    assert not t.filter(pl.col("period").str.starts_with("holdout")).height
+    assert {"walk_forward", "wf_fold_00", "wf_fold_02"} <= set(t["period"])
+    assert set(t["strategy"]) == {*names, "bh_median"}
+    assert set(t.filter(pl.col("strategy") == "bh_median")["period"]) == {"walk_forward"}
+
+    # Same folds and params as the full report, which does read the holdout.
+    full = results_table(Store(bars), SETTINGS, names)
+    on = (pl.col("regime") == "all") & (pl.col("strategy") != "bh_median") & ~pl.col("period").str.starts_with("holdout")
+    assert t.filter(on).equals(full.filter(on))
+
+    chosen = json.loads((path.parent / "walk_forward.json").read_text())
+    assert {(c["strategy"], c["capital"]) for c in chosen} == {(n, c) for n in names for c in SETTINGS.capitals}
+    grid = {"cash": 1, "bh_universe": 1, "toy": 2, "mean_reversion": None}
+    for c in chosen:
+        assert len(c["fold_params"]) == 3
+        if grid[c["strategy"]]:
+            assert c["n_variants"] == grid[c["strategy"]] * 4
+    assert len(store.variants) == sum(c["n_variants"] for c in chosen)
+
+
+def test_walk_forward_median_benchmark_is_the_middle_basket(bars):
+    from cs2trader.report import evaluate_all
+
+    t = evaluate_all(NoHoldoutStore(bars), SETTINGS, ["cash", "bh_universe"], walk_forward_only=True).results
+    row = lambda name: t.filter((pl.col("strategy") == name) & (pl.col("period") == "walk_forward")
+                                & (pl.col("regime") == "all") & (pl.col("unit") == "cash") & (pl.col("capital") == 100.0))
+    assert row("bh_median").height == 1 and row("bh_universe").height == 1
