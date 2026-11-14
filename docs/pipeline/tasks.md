@@ -548,7 +548,7 @@ T-59 waits for ≥ 14 days of snapshots (~2026-11-24), T-62 for ≥ 28 days (~20
       Executor: main loop
       Depends on: T-56
 
-- [ ] T-59 — Cross-platform arbitrage paper test: market.csgo, Waxpeer, Skinport, net of fees, small lots
+- [ ] T-59 — *(code and synthetic tests done 2026-11-14: `cs2 arbitrage --mode cross`, 355 tests, assumptions in `reports/T-59-cross-arb.md` (Skinport payout fee/delay and market.csgo top-up fee unconfirmed); real run ≥ 2026-11-26, re-run ~12 days later)* Cross-platform arbitrage paper test: market.csgo, Waxpeer, Skinport, net of fees, small lots
       Extends T-47 (wallet arbitrage). Needs ≥ 14 days of snapshots (~2026-11-24); T-54 helps.
       DoD: daily edge and realistic profit on $50 and $100 written to reports/
       Executor: main loop
@@ -599,7 +599,7 @@ T-59 waits for ≥ 14 days of snapshots (~2026-11-24), T-62 for ≥ 28 days (~20
       Executor: subagent
       Depends on: T-63
 
-- [ ] T-66 — Cash-to-cash edge (market.csgo ↔ Skinport / Waxpeer) as a second `cs2 arbitrage` mode with its own sale model (sell at the then-lowest listing minus fee) *(proposed by T-47; after T-47's real run)*
+- [x] T-66 — *(covered by T-59, 2026-11-14)* Cash-to-cash edge (market.csgo ↔ Skinport / Waxpeer) as a second `cs2 arbitrage` mode with its own sale model (sell at the then-lowest listing minus fee) *(proposed by T-47; after T-47's real run)*
 
 - [ ] T-67 — Before the real `cs2 forward` run: restrict hourly bars to the Steam universe plus held items (each decision now concatenates up to 45 days × ~27,000 items ≈ 29 M rows), then `cs2 backfill steam --refresh` *(from T-32)*
       DoD: `cs2 forward` on ≥ 28 days of real snapshots finishes under `nice 19` without the Mac lagging; results equal the unrestricted run on a synthetic fixture
