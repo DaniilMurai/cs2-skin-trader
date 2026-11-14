@@ -9,6 +9,7 @@ from cs2trader.strategies.benchmarks import (
     Cash,
 )
 from cs2trader.strategies.event import EVENT_GRID, EVENT_SPEC, EventStrategy
+from cs2trader.strategies.flip import FLIP_GRID, FLIP_SPEC, CheapFlip
 from cs2trader.strategies.lowturn import (
     CASEDIP_GRID,
     CASEDIP_SPEC,
@@ -43,7 +44,7 @@ from cs2trader.strategies.video import (
 @dataclass(frozen=True)
 class StrategyEntry:
     name: str
-    family: Literal["video", "trend", "momentum", "mean_reversion", "event", "low_turnover", "benchmark"]
+    family: Literal["video", "trend", "momentum", "mean_reversion", "event", "low_turnover", "flip", "benchmark"]
     factory: Callable[[Mapping[str, Any]], Strategy]
     grid: Mapping[str, Sequence[Any]]
     spec_md: str
@@ -83,4 +84,5 @@ REGISTRY: Mapping[str, StrategyEntry] = {
     "case_dip": StrategyEntry("case_dip", "low_turnover", CaseDip, CASEDIP_GRID, CASEDIP_SPEC),
     "cheap_reversion": StrategyEntry("cheap_reversion", "mean_reversion", CheapReversion, CHEAP_GRID, CHEAP_SPEC),
     "xs_momentum_liquid": StrategyEntry("xs_momentum_liquid", "momentum", XsMomentumLiquid, XSL_GRID, XSL_SPEC),
+    "cheap_flip": StrategyEntry("cheap_flip", "flip", CheapFlip, FLIP_GRID, FLIP_SPEC),
 }
