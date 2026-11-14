@@ -80,6 +80,12 @@ STRATEGIES: dict[str, dict[str, str]] = {
                    "cost $1 or more, ranked on weekly median prices. When the account falls a set share "
                    "below its peak, everything is sold and the strategy waits before buying again.",
     },
+    "cheap_flip": {
+        "label": "Flip cheap items bought below their usual price",
+        "summary": "Bid for skins under $5 that sell at least 20 times a day, but only where selling at the "
+                   "item's usual price (its 30-day median) would still leave a profit after every fee. "
+                   "Sell when the 7-day trade lock ends, or wait a while for the usual price to come back.",
+    },
     "trend_ma": {
         "label": "Follow the trend, else go to cash",
         "summary": "Stay invested in the most-traded skins only while the whole market is above its own "
@@ -115,7 +121,7 @@ STRATEGIES: dict[str, dict[str, str]] = {
 
 FAMILIES = {"benchmark": "Yardstick, not a strategy", "video": "From the video", "trend": "Trend following",
             "momentum": "Momentum", "mean_reversion": "Mean reversion", "event": "Events",
-            "low_turnover": "Few trades"}
+            "low_turnover": "Few trades", "flip": "Quick resale"}
 
 # (strategy, key) -> (label, unit, help). unit: "share" = a fraction shown as a percent, "days", "count", "".
 PARAMS: dict[tuple[str, str], tuple[str, str, str]] = {
@@ -134,6 +140,9 @@ PARAMS: dict[tuple[str, str], tuple[str, str, str]] = {
     ("xs_momentum_liquid", "lookback"): ("Rank by the rise over", "days", "The look-back period for ranking items."),
     ("xs_momentum_liquid", "rebalance"): ("Re-rank every", "days", "How often the ranking is refreshed."),
     ("xs_momentum_liquid", "stop"): ("Sell everything after a fall of", "share", "How far the account may fall below its peak before the strategy goes to cash."),
+    ("cheap_flip", "hurdle"): ("Profit after fees of at least", "share", "What a sale at the usual price must leave after all fees, compared with the buy price."),
+    ("cheap_flip", "discount"): ("Bid below the recent price by", "share", "The buy order is placed this far under the item's 3-day median price; it fills only if the price comes down to it."),
+    ("cheap_flip", "max_hold"): ("Sell after at most", "days", "7 = sell as soon as the trade lock ends. Longer = wait for the usual price, at most this many days."),
     ("trend_ma", "ma_days"): ("Average the market over", "days", "The market must be above its average of this many days to stay invested. Longer = slower to react."),
     ("trend_ma", "n_items"): ("Items held", "count", "How many of the most-traded items are held while invested."),
     ("quality_basket", "rebalance_days"): ("Re-pick the items every", "days", "How often the basket is chosen again."),
