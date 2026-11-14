@@ -538,7 +538,7 @@ T-59 waits for ≥ 14 days of snapshots (~2026-11-24), T-62 for ≥ 28 days (~20
       Executor: main loop
       Depends on: T-55
 
-- [ ] T-57 — Filtered momentum: xs_momentum on the liquid band with a drawdown stop (fix the 99.6% drawdown)
+- [x] T-57 — *(2026-11-14: `xs_momentum_liquid` and `cs2 report --walk-forward-only`; walk-forward 2020-01…2025-09 on real data: −99.3% at $50, −96.8% at $100 (max drawdown 99.5% / 98.3%), cash −5.0%, bh_median −58.0% / −50.6%; better than cash in 4 of 24 folds; 16 variants tried; fails on walk-forward, the holdout was not touched; `reports/T-57-momentum.md`)* Filtered momentum: xs_momentum on the liquid band with a drawdown stop (fix the 99.6% drawdown)
       DoD: walk-forward run at $50 and $100 logged; the drawdown is reported next to the return
       Executor: main loop
       Depends on: T-56
