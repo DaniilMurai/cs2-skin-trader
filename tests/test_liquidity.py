@@ -204,3 +204,15 @@ def test_default_run_id_is_the_one_pinned_before_the_limits(tmp_path, monkeypatc
     capped = result(load_settings(**{"fills.position_cap": 0.05}))
     banded = result(load_settings(**{"universe.max_price_usd": 5.0}))
     assert len({PINNED[0], capped[0], banded[0]}) == 3
+
+
+def test_medians_for_a_few_names_equal_the_full_table():
+    from cs2trader.backtest.engine import load_market
+    data = load_market(FakeStore(synthetic_bars(5, 120)), D0, D0 + timedelta(119), Settings())
+    names = {"item 02", "item 07", "never traded"}
+    for day in (D0 + timedelta(3), D0 + timedelta(77)):
+        direct = data.median_volumes(day, names)
+        table = data.liquidity_on(day).filter(pl.col("market_hash_name").is_in(names))
+        assert direct == dict(zip(table["market_hash_name"], table["median_volume"]))
+        assert set(direct) == {"item 02", "item 07"}
+        assert data.median_volumes(day, names) == direct

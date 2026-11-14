@@ -21,7 +21,14 @@ from cs2trader.strategies.lowturn import (
     QualityBasket,
 )
 from cs2trader.strategies.mean_reversion import MR_GRID, MR_SPEC, MeanReversion
-from cs2trader.strategies.momentum import XS_GRID, XS_SPEC, XsMomentum
+from cs2trader.strategies.momentum import (
+    XS_GRID,
+    XS_SPEC,
+    XSL_GRID,
+    XSL_SPEC,
+    XsMomentum,
+    XsMomentumLiquid,
+)
 from cs2trader.strategies.trend import TREND_GRID, TREND_SPEC, TrendFollow
 from cs2trader.strategies.video import (
     V1_GRID,
@@ -75,4 +82,5 @@ REGISTRY: Mapping[str, StrategyEntry] = {
     "quality_basket": StrategyEntry("quality_basket", "low_turnover", QualityBasket, QUALITY_GRID, QUALITY_SPEC),
     "case_dip": StrategyEntry("case_dip", "low_turnover", CaseDip, CASEDIP_GRID, CASEDIP_SPEC),
     "cheap_reversion": StrategyEntry("cheap_reversion", "mean_reversion", CheapReversion, CHEAP_GRID, CHEAP_SPEC),
+    "xs_momentum_liquid": StrategyEntry("xs_momentum_liquid", "momentum", XsMomentumLiquid, XSL_GRID, XSL_SPEC),
 }

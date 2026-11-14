@@ -248,7 +248,8 @@ def cmd_report(args: argparse.Namespace) -> None:
 
     settings = load_settings()
     names = [n.strip() for n in args.strategies.split(",") if n.strip()] if args.strategies else None
-    path = build_report(Store(settings.data_dir), settings.reports_dir, settings, names, args.jobs, progress=True)
+    path = build_report(Store(settings.data_dir), settings.reports_dir, settings, names, args.jobs, progress=True,
+                        walk_forward_only=args.walk_forward_only)
     first = path.read_text().split("\n", 1)[0]
     digest = re.search(r"Results hash: <code>(\w+)</code>", path.read_text()).group(1)
     print(f"report: {path}\nresults hash: {digest}\n{re.search('<h1>(.*?)</h1>', first).group(1)}")
@@ -370,6 +371,8 @@ def main() -> None:
     rp.add_argument("--strategies", help="comma-separated subset; cash and bh_universe are always included")
     rp.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) - 2),
                     help="worker processes (1 = in this process); results are identical either way")
+    rp.add_argument("--walk-forward-only", action="store_true",
+                    help="tuning and fold test windows only; nothing from wf.holdout_start on is read")
     rp.set_defaults(func=cmd_report)
 
     sub.add_parser("strategies").set_defaults(func=cmd_strategies)

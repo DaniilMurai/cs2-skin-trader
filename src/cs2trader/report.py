@@ -5,7 +5,7 @@ import re
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -45,6 +45,7 @@ SCHEMA = {"strategy": pl.String, "capital": pl.Float64, "period": pl.String, "re
 class Evaluation:
     results: pl.DataFrame
     verdicts: list[Verdict]
+    walk_forward: list[dict] = field(default_factory=list)   # walk-forward-only: params and variant counts
 
 
 def _rows(strategy: str, capital: float, period: str, regime: str, m: Metrics) -> list[dict]:
@@ -91,21 +92,24 @@ def _chain_folds(runs: list[RunResult], capital: float) -> RunResult:
                      pl.concat(eq_parts, how="vertical_relaxed"), None)
 
 
-def _regime_labels(store: Store, settings: Settings) -> pl.DataFrame:
+def _regime_labels(store: Store, settings: Settings, end) -> pl.DataFrame:
     db = getattr(store, "db", None)
     if db is not None:
         stored = db.sql("SELECT t, regime FROM regimes").pl()
         if not stored.is_empty():
-            return stored
-    bars = store.daily_bars(settings.wf.start - timedelta(days=WARMUP_DAYS), store.last_day())
+            return stored.filter(pl.col("t") <= end)
+    bars = store.daily_bars(settings.wf.start - timedelta(days=WARMUP_DAYS), end)
     labels = label_regimes(market_index(bars, store.items_frame(), "all", settings.universe), settings.regimes)
     return labels.select("t", "regime")
 
 
 def evaluate_all(store: Store, settings: Settings, strategies: list[str] | None = None,
-                 jobs: int = 1, progress: bool = False) -> Evaluation:
+                 jobs: int = 1, progress: bool = False, walk_forward_only: bool = False) -> Evaluation:
     """`jobs` > 1 runs the backtests in that many worker processes; the results are identical to
-    `jobs=1` (each tuning window is independent), only the wall time changes."""
+    `jobs=1` (each tuning window is independent), only the wall time changes.
+    `walk_forward_only` stops the day before the holdout: no bar or regime label from
+    `wf.holdout_start` on is loaded, there are no holdout rows and no verdicts (AC-21), and
+    `bh_median` is the basket with the median chained walk-forward return instead."""
     names = list(REGISTRY) if strategies is None else strategies
     unknown = [n for n in names if n not in REGISTRY]
     if unknown:
@@ -113,15 +117,28 @@ def evaluate_all(store: Store, settings: Settings, strategies: list[str] | None 
     # Benchmarks first: the verdict of every other strategy needs their holdout runs.
     names = [*REQUIRED, *[n for n in names if n not in REQUIRED]]
     wf_s = settings.wf
-    end = store.last_day()
+    end = wf_s.holdout_start - timedelta(days=1) if walk_forward_only else store.last_day()
     data = load_market(store, wf_s.start, end, settings)
-    regimes = _regime_labels(store, settings)
+    regimes = _regime_labels(store, settings, end)
     combos = [(capital, name) for capital in settings.capitals for name in names]
     started, done = time.monotonic(), []
+
+    def _tick(name: str, capital: float) -> None:
+        done.append(name)
+        if progress:
+            print(f"[{len(done)}/{len(combos)}] {name} ${capital:,.0f} done, "
+                  f"{(time.monotonic() - started) / 60:.1f} min elapsed", file=sys.stderr, flush=True)
 
     def one(runner, capital: float, name: str):
         entry = REGISTRY[name]
         wf = walk_forward(entry, capital, store, wf_s, settings, runner=runner)
+        if walk_forward_only:
+            seeds = range(1, BASKETS) if name == "bh_universe" else ()
+            extra = [[runner.submit_run(make_spec(name, {"seed": k}, capital, te0, te1, settings, store=store))
+                      for te0, te1, _, _ in wf.folds] for k in seeds]
+            out = wf, None, None, [[f.result() for f in basket] for basket in extra]
+            _tick(name, capital)
+            return out
         ho = runner.submit_run(holdout_spec(entry, wf.chosen_params, capital, wf_s, end, False, settings, store))
         ho_s = runner.submit_run(holdout_spec(entry, wf.chosen_params, capital, wf_s, end, True, settings, store))
         extra = []
@@ -129,10 +146,7 @@ def evaluate_all(store: Store, settings: Settings, strategies: list[str] | None 
             extra = [runner.submit_run(make_spec(name, {"seed": k}, capital, wf_s.holdout_start, end, settings, store=store))
                      for k in range(1, BASKETS)]
         out = wf, ho.result(), ho_s.result(), [f.result() for f in extra]
-        done.append(name)
-        if progress:
-            print(f"[{len(done)}/{len(combos)}] {name} ${capital:,.0f} done, "
-                  f"{(time.monotonic() - started) / 60:.1f} min elapsed", file=sys.stderr, flush=True)
+        _tick(name, capital)
         return out
 
     if jobs > 1:
@@ -145,6 +159,7 @@ def evaluate_all(store: Store, settings: Settings, strategies: list[str] | None 
 
     rows: list[dict] = []
     verdicts: list[Verdict] = []
+    chosen: list[dict] = []
     ho_runs: dict[float, dict[str, RunResult]] = {c: {} for c in settings.capitals}
     for (capital, name), (wf, ho, ho_s, baskets) in zip(combos, results):
         entry = REGISTRY[name]
@@ -152,6 +167,15 @@ def evaluate_all(store: Store, settings: Settings, strategies: list[str] | None 
             rows += _rows(name, capital, f"{FOLD_PREFIX}{i:02d}", "all", metrics(res))
         if wf.test_runs:
             rows += _period_rows(name, capital, "walk_forward", _chain_folds(list(wf.test_runs), capital), regimes)
+        if walk_forward_only:
+            if baskets:
+                chained = [_chain_folds(runs, capital) for runs in ([*wf.test_runs], *baskets)]
+                ranked = sorted(enumerate(chained), key=lambda kv: (kv[1].equity["equity_cash"][-1], kv[0]))
+                rows += _period_rows(MEDIAN_NAME, capital, "walk_forward", ranked[len(ranked) // 2][1], regimes)
+            chosen.append({"strategy": name, "capital": capital, "chosen_params": dict(wf.chosen_params),
+                           "n_variants": wf.n_variants,
+                           "fold_params": [dict(params) for _, _, params, _ in wf.folds]})
+            continue
         rows += _period_rows(name, capital, "holdout", ho, regimes)
         rows += _period_rows(name, capital, "holdout_stress", ho_s, regimes)
         ho_runs[capital][name] = ho
@@ -164,7 +188,7 @@ def evaluate_all(store: Store, settings: Settings, strategies: list[str] | None 
             ho_runs[capital][MEDIAN_NAME] = median
         if entry.family != "benchmark":
             verdicts.append(_verdict(name, capital, wf, ho, ho_s, ho_runs[capital]))
-    return Evaluation(pl.DataFrame(rows, schema=SCHEMA).sort(KEY), verdicts)
+    return Evaluation(pl.DataFrame(rows, schema=SCHEMA).sort(KEY), verdicts, chosen)
 
 
 def _verdict(name: str, capital: float, wf: WalkForwardResult, ho: RunResult, ho_s: RunResult,
@@ -262,6 +286,7 @@ def _sensitivity(results: pl.DataFrame, capitals: list[float], settings: Setting
 
 
 def _assumptions(store: Store, settings: Settings, end) -> str:
+    """`end` None: the report was built without the holdout."""
     f, c = settings.fills, settings.costs
     if f.ratio_source == "fixed":
         ratio = f"fixed, {f.ratio_fallback} for every category (fills.ratio_fallback)"
@@ -278,7 +303,7 @@ def _assumptions(store: Store, settings: Settings, end) -> str:
         (f"Walk-forward: {settings.wf.start} .. {settings.wf.end}, train {settings.wf.train_days} d, "
          f"test {settings.wf.test_days} d; walk_forward rows chain the fold test runs "
          "(each fold starts with the full capital, fold returns are compounded)"),
-        f"Holdout: {settings.wf.holdout_start} .. {end}",
+        f"Holdout: {settings.wf.holdout_start} .. {end}" if end else "Holdout: not run (walk-forward only)",
         f"Data version: {store.data_version()}",
     ]
     return "<ul>" + "".join(f"<li>{html.escape(i)}</li>" for i in items) + "</ul>"
@@ -308,16 +333,20 @@ def forward_section(rows: pl.DataFrame | None) -> str:
 
 
 def build_report(store: Store, out_dir: Path, settings: Settings | None = None,
-                 strategies: list[str] | None = None, jobs: int = 1, progress: bool = False) -> Path:
+                 strategies: list[str] | None = None, jobs: int = 1, progress: bool = False,
+                 walk_forward_only: bool = False) -> Path:
+    """`walk_forward_only`: reports/<YYYY-MM-DD>-walk-forward/, so the day's full report is not
+    overwritten; `walk_forward.json` there holds the chosen params and the variant counts."""
     settings = settings or load_settings()
-    ev = evaluate_all(store, settings, strategies, jobs, progress)
+    ev = evaluate_all(store, settings, strategies, jobs, progress, walk_forward_only)
     digest = results_hash(ev.results)
     caps = settings.capitals
     vrows = [[v.strategy, _money(v.capital), v.status, v.first_broken_rule or "-",
               _fmt(v.deflated_sharpe, "num"), str(v.n_variants)] for v in ev.verdicts]
     shown = [n for n in REGISTRY if strategies is None or n in strategies or n in REQUIRED]
     appendix = "".join(f"<h3>{html.escape(n)}</h3>{_md(REGISTRY[n].spec_md)}" for n in shown)
-    summary = summary_line(ev.verdicts, caps)
+    summary = ("Walk-forward only: the holdout was not run, no verdicts" if walk_forward_only
+               else summary_line(ev.verdicts, caps))
     body = (
         f"<p>Results hash: <code>{digest}</code></p>"
         f"<h2>Verdicts</h2>"
@@ -325,7 +354,7 @@ def build_report(store: Store, out_dir: Path, settings: Settings | None = None,
         + "<h2>Results</h2>" + _results_tables(ev.results, caps)
         + forward_section(_forward_rows(settings))
         + "<h2>Sensitivity</h2>" + _sensitivity(ev.results, caps, settings)
-        + "<h2>Assumptions</h2>" + _assumptions(store, settings, store.last_day())
+        + "<h2>Assumptions</h2>" + _assumptions(store, settings, None if walk_forward_only else store.last_day())
         + "<h2>Appendix: strategy specs</h2>" + appendix
     )
     css = ("body{font-family:sans-serif;max-width:1100px;margin:2em auto;padding:0 1em}"
@@ -336,9 +365,11 @@ def build_report(store: Store, out_dir: Path, settings: Settings | None = None,
     page = (f"<!doctype html><html><head><meta charset=\"utf-8\"><title>{html.escape(summary)}</title>"
             f"<style>{css}</style></head><body><h1>{html.escape(summary)}</h1>\n{body}\n</body></html>\n")
     day = datetime.now(UTC).date()
-    out = Path(out_dir) / day.isoformat()
+    out = Path(out_dir) / (day.isoformat() + ("-walk-forward" if walk_forward_only else ""))
     out.mkdir(parents=True, exist_ok=True)
     ev.results.write_parquet(out / "results.parquet")
+    if walk_forward_only:
+        (out / "walk_forward.json").write_text(json.dumps(ev.walk_forward, indent=2, sort_keys=True) + "\n")
     # The UI reads the verdicts from here; the HTML stays the human-readable copy.
     (out / "verdicts.json").write_text(json.dumps({
         "summary": summary, "results_hash": digest, "capitals": caps,

@@ -97,7 +97,14 @@ class MarketData:
         return self._liquidity[now]
 
     def median_volumes(self, now: date, names: set[str]) -> dict[str, float]:
-        rows = self.liquidity_on(now).filter(pl.col("market_hash_name").is_in(names))
+        if now in self._liquidity:
+            rows = self._liquidity[now].filter(pl.col("market_hash_name").is_in(names))
+        else:
+            # The engine asks every day for a handful of names; caching the whole table for each
+            # day of a walk-forward costs ~1 MB a day per worker process, so only these names are computed.
+            keep = pl.col("market_hash_name").is_in(names)
+            rows = liquidity(self.window(now, WINDOW_DAYS).filter(keep), now,
+                             self.first_t.filter(keep & (pl.col("first_t") <= now)))
         return dict(zip(rows["market_hash_name"].to_list(), rows["median_volume"].to_list()))
 
     def _days_in(self, lo: date, hi: date) -> Sequence[date]:
