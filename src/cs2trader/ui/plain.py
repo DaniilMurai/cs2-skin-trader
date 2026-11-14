@@ -74,6 +74,12 @@ STRATEGIES: dict[str, dict[str, str]] = {
         "summary": "Every few weeks, rank all tradable skins by how much they rose over a look-back period, "
                    "hold the top few in equal amounts and sell the ones that dropped out of the top.",
     },
+    "xs_momentum_liquid": {
+        "label": "Buy recent winners, liquid items only, with a stop",
+        "summary": "Like buying recent winners, but only among items that sell at least 20 times a day and "
+                   "cost $1 or more, ranked on weekly median prices. When the account falls a set share "
+                   "below its peak, everything is sold and the strategy waits before buying again.",
+    },
     "trend_ma": {
         "label": "Follow the trend, else go to cash",
         "summary": "Stay invested in the most-traded skins only while the whole market is above its own "
@@ -125,6 +131,9 @@ PARAMS: dict[tuple[str, str], tuple[str, str, str]] = {
     ("xs_momentum", "lookback"): ("Rank by the rise over", "days", "The look-back period for ranking items."),
     ("xs_momentum", "k"): ("Items held", "count", "How many of the top-ranked items are held."),
     ("xs_momentum", "rebalance"): ("Re-rank every", "days", "How often the ranking is refreshed."),
+    ("xs_momentum_liquid", "lookback"): ("Rank by the rise over", "days", "The look-back period for ranking items."),
+    ("xs_momentum_liquid", "rebalance"): ("Re-rank every", "days", "How often the ranking is refreshed."),
+    ("xs_momentum_liquid", "stop"): ("Sell everything after a fall of", "share", "How far the account may fall below its peak before the strategy goes to cash."),
     ("trend_ma", "ma_days"): ("Average the market over", "days", "The market must be above its average of this many days to stay invested. Longer = slower to react."),
     ("trend_ma", "n_items"): ("Items held", "count", "How many of the most-traded items are held while invested."),
     ("quality_basket", "rebalance_days"): ("Re-pick the items every", "days", "How often the basket is chosen again."),
